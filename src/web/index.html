@@ -704,8 +704,9 @@ const slugOf = t => t.toLowerCase().replace(/<[^>]+>|&[a-z#0-9]+;|[^\w\s-]/g, ""
 function md(text, links) {     // links: only for our own README (headings get ids, [text](url) become links); model answers never get clickable links
   const link = s => !links ? s : s.replace(/\[([^\]]+)\]\((#[\w-]+|https:\/\/[^\s)]+)\)/g, (m, t, u) =>
     u[0] === "#" ? `<a href="${u}" data-anchor="${u.slice(1)}">${t}</a>` : `<a href="${u}" target="_blank" rel="noopener">${t}</a>`);
-  const inline = s => link(s.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>"));
-  let html = "", inList = false, code = null, table = null;
+  const inline = s => link(s.replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/(?<![\w*])\*(?=\S)([^*\n]*?\S)\*(?![\w*])/g, "<em>$1</em>"));
+  let html = "", inList = false, code = null, table = null;   // inList: false, "ul" or "ol"
   const cells = l => l.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim()));
   const flushTable = () => {                        // | a | b | rows, with an optional |---| separator
     if (!table) return;
@@ -719,23 +720,28 @@ function md(text, links) {     // links: only for our own README (headings get i
     const line = raw.trimEnd();
     if (/^\s*```/.test(line)) {                     // fenced code: keep lines and indentation as they are
       flushTable();
-      if (code === null) { if (inList) { html += "</ul>"; inList = false; } code = []; }
+      if (code === null) { if (inList) { html += `</${inList}>`; inList = false; } code = []; }
       else { html += `<pre><code>${code.join("\n")}</code></pre>`; code = null; }
       continue;
     }
     if (code !== null) { code.push(line); continue; }
-    if (/^\s*\|.*\|\s*$/.test(line)) { if (inList) { html += "</ul>"; inList = false; } (table ||= []).push(line); continue; }
+    if (/^\s*\|.*\|\s*$/.test(line)) { if (inList) { html += `</${inList}>`; inList = false; } (table ||= []).push(line); continue; }
     flushTable();
-    const item = line.match(/^\s*(?:[-*•]|\d+\.)\s+(.*)/);
-    if (item) { if (!inList) { html += "<ul>"; inList = true; } html += `<li>${inline(item[1])}</li>`; continue; }
-    if (inList) { html += "</ul>"; inList = false; }
+    const item = line.match(/^\s*(?:([-*•])|\d+\.)\s+(.*)/);
+    if (item) {
+      const kind = item[1] ? "ul" : "ol";
+      if (inList && inList !== kind) { html += `</${inList}>`; inList = false; }
+      if (!inList) { html += `<${kind}>`; inList = kind; }
+      html += `<li>${inline(item[2])}</li>`; continue;
+    }
+    if (inList) { html += `</${inList}>`; inList = false; }
     const head = line.match(/^#{1,4}\s+(.*)/);
     if (head) html += `<h4${links ? ` id="rm-${slugOf(head[1])}"` : ""}>${inline(head[1])}</h4>`;
     else if (/^\s*-{3,}\s*$/.test(line)) html += "<hr>";
     else if (line.trim()) html += `<p>${inline(line)}</p>`;
   }
   flushTable();
-  if (inList) html += "</ul>";
+  if (inList) html += `</${inList}>`;
   if (code !== null) html += `<pre><code>${code.join("\n")}</code></pre>`;   // unclosed fence
   return /^\W*tl;?dr/i.test(text.trim()) ? html.replace("<p>", '<p class="tldr">') : html;
 }
@@ -1846,24 +1852,6 @@ async function openDoc(name) {
     const r = await api("/personas/" + encodeURIComponent(name) + "/doc");
     $("rsheet").innerHTML = `<div class="rd-head"><div class="note">docs/personas/${esc(name)}.md</div><button class="btn" data-rclose>Close</button></div><div class="md">${md(r.markdown)}</div>`;
   } catch (e) { $("rsheet").innerHTML = `<div class="note bad">${esc(e.message)}</div><button class="btn" data-rclose>Close</button>`; }
-}
-function md(src) {
-  const inl = t => esc(t).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\*([^*]+)\*/g, "<i>$1</i>");
-  const out = []; let list = null, table = null;
-  const flush = () => {
-    if (list) { out.push(`<${list.t}>${list.i.map(x => `<li>${x}</li>`).join("")}</${list.t}>`); list = null; }
-    if (table) { out.push(`<table>${table.map((r, i) => `<tr>${r.map(c => i ? `<td>${inl(c)}</td>` : `<th>${inl(c)}</th>`).join("")}</tr>`).join("")}</table>`); table = null; }
-  };
-  for (const line of src.split("\n")) {
-    const l = line.trim(), h = l.match(/^(#{1,3}) (.*)/), li = l.match(/^(-|\d+\.) (.*)/);
-    if (l.startsWith("|")) { if (/^\|[-| ]+\|$/.test(l)) continue; if (list) flush(); (table = table || []).push(l.slice(1, -1).split("|").map(c => c.trim())); continue; }
-    if (li) { const t = li[1] === "-" ? "ul" : "ol"; if (table || (list && list.t !== t)) flush(); if (!list) list = { t, i: [] }; list.i.push(inl(li[2])); continue; }
-    flush();
-    if (h) out.push(`<h${h[1].length}>${inl(h[2])}</h${h[1].length}>`);
-    else if (l === "---") out.push("<hr>");
-    else if (l) out.push(`<p>${inl(l)}</p>`);
-  }
-  flush(); return out.join("");
 }
 async function pickPersona(id) {
   const d = demoList.find(x => x.id === id);
