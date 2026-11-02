@@ -20,12 +20,14 @@ from typing import Optional
 from src.db.database import get_connection
 
 ORDER = ("nano", "super", "ultra")
-EXPECTED_OUT = {"nano": 500, "super": 800, "ultra": 1500}   # typical answer length, tokens (Ultra includes thinking)
-TIGHT_CAP = {"nano": 400, "super": 600, "ultra": 900}
+# Output tokens include reasoning: Muse Spark always reasons, and its reasoning tokens count toward
+# max_completion_tokens. Measured: a five-word reply at minimal effort used 156 reasoning tokens of 172.
+EXPECTED_OUT = {"nano": 700, "super": 1500, "ultra": 3000}   # typical answer + reasoning, tokens (learned from use)
+TIGHT_CAP = {"nano": 800, "super": 1000, "ultra": 1200}     # tight budgets also drop reasoning to minimal
 SHARE = 0.20
 TIGHT = 0.25
-MIN_ANSWER_TOKENS = 60   # below this an answer isn't worth giving: say the budget is used up instead
-MAX_ANSWER_TOKENS = 32_000   # a large budget must not ask for more output than the models allow (context is ~262k)
+MIN_ANSWER_TOKENS = 400  # reasoning (~150-250 tokens at minimal) plus a short answer; below this, say the budget is used up
+MAX_ANSWER_TOKENS = 32_000   # a large budget must not ask for more output than a single answer needs
 INPUT_MARGIN = 1.5      # input tokens are estimated (~4 chars each) before the call; leave room for error
 
 
