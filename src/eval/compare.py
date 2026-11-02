@@ -66,7 +66,8 @@ def answer(llm, tier, messages):
     r = llm.chat(tier, messages)
     return {"tier": tier, "model": r.model, "text": r.text, "latency_ms": r.latency_ms,
             "output_tokens": r.output_tokens, "reasoning_tokens": r.reasoning_tokens,
-            "cost_usd": _cost(tier, r.input_tokens, r.output_tokens),
+            "input_tokens": r.input_tokens, "cached_tokens": r.cached_tokens, "effort": r.reasoning_effort,
+            "cost_usd": _cost(tier, r.input_tokens, r.output_tokens, r.cached_tokens),
             "opens_with_tldr": r.text.lstrip(" \t\r\n*_#>-`").lower().startswith("tl;dr"),
             "words": len(r.text.split()), "unbacked_sources": find_unbacked_sources(r.text)}
 
@@ -190,7 +191,7 @@ def main(argv):
         from datetime import datetime
         from src import config
         from src.eval import reports
-        place = reports.where(config.TIER_PROVIDERS)
+        place = reports.place(config.TIER_PROVIDERS, rep["simulated"])
         print("saved:", reports.save(rep, f"compare-{args.only.replace(',', '+') + '-' if args.only else ''}{'-vs-'.join(rep['contestants'])}-{place}-{datetime.now():%Y%m%d-%H%M}",
                                      config.TIER_PROVIDERS))
     print(rep["verdict"])

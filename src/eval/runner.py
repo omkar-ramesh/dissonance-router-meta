@@ -17,9 +17,11 @@ STRATEGIES = {"always-nano": "nano", "always-ultra": "ultra", "router": None}
 USER = "eval-user"
 
 
-def _cost(tier, input_tokens, output_tokens):
+def _cost(tier, input_tokens, output_tokens, cached_tokens=0):
+    """Dollar cost at the tier's prices; cached input tokens are billed at the cached rate."""
     price = config.PRICES[tier]
-    return (input_tokens * price["in"] + output_tokens * price["out"]) / 1_000_000
+    cached = min(cached_tokens, input_tokens)
+    return ((input_tokens - cached) * price["in"] + cached * price.get("cached", price["in"]) + output_tokens * price["out"]) / 1_000_000
 
 
 class Tally:
@@ -69,10 +71,16 @@ def run_scenario(scenario, llm, strategy=None, graded=True, reader=None):
                 "say": turn.say, "ideal": turn.ideal, "router_chose": result["model_chosen"], "served": served,
                 "reason": result["routing_reason"], "input_tokens": call.input_tokens,
                 "output_tokens": call.output_tokens, "latency_ms": call.latency_ms,
-                "cost_usd": _cost(served, call.input_tokens, call.output_tokens), "response": result["response"],
+                "cost_usd": _cost(served, call.input_tokens, call.output_tokens, call.cached_tokens), "response": result["response"],
+                # what the model actually did: which model, how hard it thought, what was cached, how fast it started
+                "model": call.model, "effort": call.reasoning_effort, "reasoning_tokens": call.reasoning_tokens,
+                "cached_tokens": call.cached_tokens, "ttft_ms": call.ttft_ms,
                 # the signal reader's own calls, counted rather than hidden
-                "reader_cost_usd": sum(_cost("nano", r["input_tokens"], r["output_tokens"]) for r in reads),
+                "reader_cost_usd": sum(_cost("nano", r["input_tokens"], r["output_tokens"], r.get("cached_tokens", 0)) for r in reads),
                 "reader_latency_ms": sum(r["latency_ms"] for r in reads),
+                "reader_input_tokens": sum(r["input_tokens"] for r in reads),
+                "reader_output_tokens": sum(r["output_tokens"] for r in reads),
+                "reader_reasoning_tokens": sum(r.get("reasoning_tokens", 0) for r in reads),
             })
             if graded:
                 _grade(agent, db, turn, result, served, tally.simulated, flag)

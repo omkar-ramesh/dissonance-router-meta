@@ -192,7 +192,7 @@ aside.side{width:220px;flex:none;border-right:1px solid var(--line);position:rel
 .md table{border-collapse:collapse;font-size:12px;margin:6px 0}.md td,.md th{border:1px solid var(--line);padding:5px 10px;text-align:left}.md hr{border:0;border-top:1px solid var(--line);margin:16px 0}
 .av{flex:none;display:inline-grid;place-items:center;border-radius:50%}.pcard{align-items:center;text-align:center;position:relative}.pcard .act{position:absolute;top:10px;right:12px;font-size:10px;letter-spacing:.06em;text-transform:uppercase}.pcard .t{font-size:16px}.pcard .d{text-align:center}
 .view-btn b{display:block;color:var(--text);font-size:13px}
-.src.local{color:var(--blue);background:#5aa9ff22}.src.api{color:var(--pink);background:#ff7ad922}
+.src.local{color:var(--blue);background:#5aa9ff22}.src.api{color:var(--pink);background:#ff7ad922}.src.standard{color:var(--green);background:#3ddc8422}.src.contributor{color:var(--amber);background:#ffb02022}
 #rmodal{position:fixed;inset:0;background:#000a;z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow:auto}
 #rmodal[hidden]{display:none}
 #rmodal .sheet{background:var(--bg);border:1px solid var(--line);border-radius:14px;width:min(1200px,100%);padding:18px 20px}
@@ -1040,7 +1040,7 @@ function renderEvidence() {
   const filters = [["all", "All"], ["api", "Meta runs"], ["archived", "Archived"]]
     .map(([k, l]) => `<button class="chipbtn ${rfilter === k ? "on" : ""}" data-rf="${k}">${l} · ${n(k)}</button>`).join("");
   const cardHtml = r => `<button class="rcard" data-report="${esc(r.id)}">
-      <div class="f"><span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.archived ? `<span class="src">archived</span>` : ""}<span>${esc(stamp(r.created))}</span></div>
+      <div class="f"><span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.mode ? `<span class="src ${esc(r.mode)}">${esc(r.mode)}</span>` : ""}${r.archived ? `<span class="src">archived</span>` : ""}<span>${esc(stamp(r.created))}</span></div>
       <div class="t">${esc(r.title)}</div><div class="h">${esc(r.headline)}</div>
       <div class="d">${esc(r.description)}</div>
       <div class="f">${Object.entries(r.models || {}).map(([t, m]) => `<span>${esc(t)}: ${esc(m)}</span>`).join("")}</div>
@@ -1063,11 +1063,11 @@ function renderReportsPanel() {
   const box = $("rpanel"); if (!box) return;
   if (reports === null) { box.innerHTML = `<div class="pn note">Couldn't reach the server for the saved reports.</div>`; return; }
   const acts = r => `<div class="acts"><button class="sqb" data-redit="${esc(r.id)}" title="Rename this report" aria-label="Rename this report">✎</button><button class="sqb${rfav(r) ? " on" : ""}" data-rfav="${esc(r.id)}" title="${rfav(r) ? "Remove from favourites" : "Add to favourites"}" aria-label="Favourite" aria-pressed="${rfav(r)}">${rfav(r) ? "♥" : "♡"}</button><button class="btn" data-report="${esc(r.id)}">Details</button></div>`;
-  const tags = r => `<span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.simulated ? `<span class="src warn">simulated</span>` : ""}${r.archived ? `<span class="src">archived</span>` : ""}`;
+  const tags = r => `<span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.mode ? `<span class="src ${esc(r.mode)}">${esc(r.mode)}</span>` : ""}${r.simulated ? `<span class="src warn">simulated</span>` : ""}${r.archived ? `<span class="src">archived</span>` : ""}`;
   const lr = r => `<div class="mcard rrow" data-rid="${esc(r.id)}"><div class="rr-main"><div class="t">${esc(rname(r))}</div><div class="f">${tags(r)}<span>${esc(stamp(r.created))}</span></div></div>
       <div class="h">${esc(r.headline)}${flagIcon(r)}</div>
       <dl class="kv rr-kv">${(r.metrics || []).slice(0, 4).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${acts(r)}</div>`;
-  const mc = r => `<div class="mcard sq" data-rid="${esc(r.id)}"><div class="f"><span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.simulated ? `<span class="src warn">simulated</span>` : ""}${r.archived ? `<span class="src">archived</span>` : ""}</div>
+  const mc = r => `<div class="mcard sq" data-rid="${esc(r.id)}"><div class="f"><span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.mode ? `<span class="src ${esc(r.mode)}">${esc(r.mode)}</span>` : ""}${r.simulated ? `<span class="src warn">simulated</span>` : ""}${r.archived ? `<span class="src">archived</span>` : ""}</div>
       <div class="t">${esc(rname(r))}</div><div class="h">${esc(r.headline)}${flagIcon(r)}</div>
       <dl class="kv">${(r.metrics || []).slice(0, 3).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
       <div class="foot"><span>${esc(stamp(r.created))}</span><div class="acts"><button class="sqb" data-redit="${esc(r.id)}" title="Rename this report" aria-label="Rename this report">✎</button><button class="sqb${rfav(r) ? " on" : ""}" data-rfav="${esc(r.id)}" title="${rfav(r) ? "Remove from favourites" : "Add to favourites"}" aria-label="Favourite" aria-pressed="${rfav(r)}">${rfav(r) ? "♥" : "♡"}</button><button class="btn" data-report="${esc(r.id)}">Details</button></div></div></div>`;
@@ -1147,12 +1147,15 @@ function strategyBars(r) {
 }
 function scenarioRows(rows) {
   return rows.map(s => {
-    const turns = s.turns.map(t => `<tr><td>${esc(t.say)}</td><td>${esc(t.ideal)}</td><td><span class="pill ${esc(t.served)}">${esc(t.served)}</span></td>
-      <td>${t.input_tokens}/${t.output_tokens}</td><td>${money(t.cost_usd)}</td><td>${(t.latency_ms / 1000).toFixed(1)} s</td><td class="reason">${esc(t.reason)}</td></tr>`).join("");
+    const turns = s.turns.map(t => `<tr><td>${esc(t.say)}</td><td>${esc(t.ideal)}</td><td><span class="pill ${esc(t.served)}">${esc(t.served)}</span>${t.model ? `<div class="note">${esc(t.model)}${t.effort ? ` · ${esc(t.effort)}` : ""}</div>` : ""}</td>
+      <td>${t.input_tokens}/${t.output_tokens}</td><td>${t.reasoning_tokens ?? "–"}${t.cached_tokens ? ` <span class="note">(${t.cached_tokens} cached in)</span>` : ""}</td>
+      <td>${money(t.cost_usd)}${t.reader_cost_usd ? `<div class="note">reader ${money(t.reader_cost_usd)}</div>` : ""}</td>
+      <td>${(t.latency_ms / 1000).toFixed(1)} s${t.ttft_ms != null ? `<div class="note">first token ${(t.ttft_ms / 1000).toFixed(1)} s</div>` : ""}</td><td class="reason">${esc(t.reason)}</td></tr>`).join("");
+    const answers = s.turns.some(t => t.response) ? `<details style="margin-top:8px"><summary class="note" style="cursor:pointer">The answers, turn by turn</summary>${s.turns.map(t => `<div class="case"><b>You:</b> ${esc(t.say)}<div class="ans">${esc(t.response || "")}</div></div>`).join("")}</details>` : "";
     const found = s.findings.length ? `<p class="note">Findings: ${s.findings.map(f => `<span class="code">${esc(f.code)}</span> ${esc(f.detail || f.message || "")}`).join(" ")}</p>` : "";
     return `<tr class="srow" data-srow title="Click to open this scenario"><td>${esc(s.title)}${s.kind === "heldout" ? ' <span class="note">held-out</span>' : ""}</td>${cell(s)}${codes(s)}</tr>
       <tr class="sdetail" hidden><td colspan="3"><p class="note" style="margin:0 0 6px">${esc(s.why)}</p>
-      <table><tr><th>You said</th><th>Ideal</th><th>Served by</th><th>Tokens in/out</th><th>Cost</th><th>Time</th><th>Why</th></tr>${turns}</table>${found}</td></tr>`;
+      <table><tr><th>You said</th><th>Ideal</th><th>Served by</th><th>Tokens in/out</th><th>Reasoning</th><th>Cost</th><th>Time</th><th>Why</th></tr>${turns}</table>${found}${answers}</td></tr>`;
   }).join("");
 }
 function scenarioBody(r) {
@@ -1168,7 +1171,7 @@ function scenarioBody(r) {
 }
 function compareBody(c) {
   const cases = c.results.map(r => `<div class="case"><b>${esc(r.id)}</b> · said ${esc(r.stated)}, does ${esc(r.observed)} · winner: <b>${esc(r.outcome)}</b><div class="note"><q>${esc(r.message)}</q></div>
-    ${Object.entries(r.answers).map(([t, a]) => `<div class="note" style="margin-top:6px"><span class="pill ${esc(t)}">${esc(t)}</span> ${esc(a.model)} · ${a.words} words · ${a.output_tokens} tokens · ${(a.latency_ms / 1000).toFixed(1)} s · ${money(a.cost_usd)}</div><div class="ans">${esc(a.text)}</div>`).join("")}
+    ${Object.entries(r.answers).map(([t, a]) => `<div class="note" style="margin-top:6px"><span class="pill ${esc(t)}">${esc(t)}</span> ${esc(a.model)} · ${a.words} words · ${a.output_tokens} tokens${a.reasoning_tokens != null ? ` (${a.reasoning_tokens} reasoning)` : ""}${a.effort ? ` · ${esc(a.effort)} effort` : ""} · ${(a.latency_ms / 1000).toFixed(1)} s · ${money(a.cost_usd)}</div><div class="ans">${esc(a.text)}</div>`).join("")}
     ${r.verdicts.map(v => `<div class="note" style="margin-top:4px">Judge (${esc(v.A)} first): ${esc(v.winner)} · ${esc(v.why)}</div>`).join("")}</div>`).join("");
   return compareCard(c) + `<h2>Every case</h2><div class="card">${cases}</div>`;
 }
@@ -1180,7 +1183,7 @@ async function openReport(id) {
     $("rsheet").innerHTML = `<div class="rd-head"><div class="title">${esc(rmeta()[id]?.name || w.title)}</div><button class="btn" data-rclose>Close</button></div>
       <div class="rd-wrap">
         <aside class="rd-side">
-          <div><span class="src ${esc(w.source)}">${SRC[w.source] || esc(w.source)}</span>${w.simulated ? ` <span class="src warn">simulated</span>` : ""}${w.archived ? ` <span class="src">archived</span>` : ""}</div>
+          <div><span class="src ${esc(w.source)}">${SRC[w.source] || esc(w.source)}</span>${w.mode ? ` <span class="src ${esc(w.mode)}">${esc(w.mode)}</span>` : ""}${w.simulated ? ` <span class="src warn">simulated</span>` : ""}${w.archived ? ` <span class="src">archived</span>` : ""}</div>
           <div class="h" style="font-size:18px;font-weight:700;color:var(--green)">${esc(w.headline)}</div>
           <div class="note">${esc(w.description)}</div>
           <dl class="kv">${(w.metrics || []).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>

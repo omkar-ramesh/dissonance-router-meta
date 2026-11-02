@@ -216,3 +216,36 @@ class TestDemos:
         assert out["aligned"]["label"] == "PASS"
         assert out["false_claim"]["label"] == "CAUGHT"            # the planted link is flagged
         assert all(r["label"] in ("PASS", "FAIL", "FIXED", "KNOWN GAP", "CAUGHT", "MISSED") for r in out.values())
+
+
+class TestReportTotals:
+    TURN = {"ideal": "nano", "router_chose": "super", "input_tokens": 100, "output_tokens": 200, "reasoning_tokens": 150,
+            "cached_tokens": 40, "latency_ms": 2000, "ttft_ms": 800, "cost_usd": 0.001,
+            "reader_input_tokens": 30, "reader_output_tokens": 20, "reader_reasoning_tokens": 15, "reader_cost_usd": 0.0002}
+
+    def report(self):
+        return {"scenarios": [{"id": "s", "kind": "success", "label": "PASS", "as_expected": True,
+                               "turns": [self.TURN, {**self.TURN, "ideal": "super"}]}], "strategies": {},
+                "self_test": {"caught": 7, "total": 7}, "simulated": False}
+
+    def test_totals_come_from_the_turns_not_the_strategy_table(self):
+        from src.eval.reports import turn_totals
+        t = turn_totals(self.report())
+        assert (t["tok_in"], t["tok_out"], t["reasoning"], t["cached"]) == (260, 440, 330, 80)
+        assert t["cost"] == pytest.approx(0.0024) and t["reader_cost"] == pytest.approx(0.0004)
+        assert (t["graded"], t["matched"], t["under"], t["over"]) == (2, 1, 0, 1)
+
+    def test_card_metrics_show_real_numbers_when_there_is_no_strategy_table(self):
+        from src.eval.reports import _scenario_metrics
+        m = dict(_scenario_metrics(self.report()))
+        assert m["Tokens in / out (all calls)"] == "260 / 440" and m["Reasoning tokens"] == "330"
+        assert m["Cost (answers + reader)"] == "$0.00240" and m["Cached input tokens"] == "80"
+        assert m["Routing accuracy"] == "1/2" and m["Time to first token"] == "800 ms"
+
+    def test_saved_meta_run_records_the_mode_and_efforts(self, tmp_path):
+        from src import config
+        from src.eval import reports
+        card = reports.build({**self.report(), "reader": "nano", "models": {}}, "x", {"nano": "meta"})
+        assert card["source"] == "api" and card["mode"] == config.MODE and card["efforts"]["nano"] == config.REASONING["nano"]
+        assert dict(card["metrics"])["Mode"] == config.MODE.title() and config.MODE in card["run_on"]
+        assert reports.place({"nano": "meta"}) == f"api-{config.MODE}" and reports.place({"nano": "meta"}, True) == "simulated"

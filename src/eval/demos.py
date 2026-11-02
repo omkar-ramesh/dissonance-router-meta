@@ -111,7 +111,7 @@ if __name__ == "__main__":
     if "--save" in sys.argv:
         from datetime import datetime
         from src.eval import reports
-        place = reports.where(config.TIER_PROVIDERS)
+        place = reports.place(config.TIER_PROVIDERS)
         stamp = f"{datetime.now():%Y%m%d-%H%M}"
         for res in results:
             print("saved:", reports.save({"demos": [res], "models": config.MODEL_TIERS, "simulated": False},

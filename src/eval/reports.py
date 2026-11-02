@@ -23,19 +23,72 @@ def where(providers: dict | None) -> str:
     return "api" if any(p == "meta" for p in (providers or {}).values()) else "local"
 
 
+def place(providers: dict | None, simulated: bool = False) -> str:
+    """The run's place for a file name: simulated, or the Meta mode it ran in (api-standard, api-contributor)."""
+    if simulated:
+        return "simulated"
+    w = where(providers)
+    return f"api-{config.MODE}" if w == "api" else w
+
+
 def _ms(v) -> str:
     return f"{v / 1000:.1f} s" if v >= 1000 else f"{v:.0f} ms"
 
 
+RANK = {"nano": 0, "super": 1, "ultra": 2}
+
+
+def turn_totals(report: dict) -> dict:
+    """Totals over every turn that really happened: answers plus the signal reader's own calls.
+
+    The strategy table only prices the scenarios it re-runs, so a card built from it showed 0 tokens
+    for the rest. The turns are the record of what was actually sent and billed.
+    """
+    t = dict(turns=0, graded=0, matched=0, under=0, over=0, tok_in=0, tok_out=0, reasoning=0, cached=0, ms=0, ttft=[],
+             cost=0.0, reader_cost=0.0, reader_in=0, reader_out=0, reader_reasoning=0)
+    for s in report.get("scenarios", []):
+        for x in s.get("turns", []):
+            t["turns"] += 1
+            if x.get("ideal"):
+                t["graded"] += 1
+                chose = x.get("router_chose")
+                t["matched"] += chose == x["ideal"]
+                if chose in RANK and x["ideal"] in RANK and chose != x["ideal"]:
+                    t["under" if RANK[chose] < RANK[x["ideal"]] else "over"] += 1
+            t["tok_in"] += x.get("input_tokens", 0) + x.get("reader_input_tokens", 0)
+            t["tok_out"] += x.get("output_tokens", 0) + x.get("reader_output_tokens", 0)
+            t["reasoning"] += x.get("reasoning_tokens", 0) + x.get("reader_reasoning_tokens", 0)
+            t["cached"] += x.get("cached_tokens", 0)
+            t["ms"] += x.get("latency_ms", 0)
+            if x.get("ttft_ms") is not None:
+                t["ttft"].append(x["ttft_ms"])
+            t["cost"] += x.get("cost_usd", 0) + x.get("reader_cost_usd", 0)
+            t["reader_cost"] += x.get("reader_cost_usd", 0)
+            t["reader_in"] += x.get("reader_input_tokens", 0)
+            t["reader_out"] += x.get("reader_output_tokens", 0)
+            t["reader_reasoning"] += x.get("reader_reasoning_tokens", 0)
+    return t
+
+
 def _scenario_metrics(report: dict) -> list:
-    r = report["strategies"].get("router") or next(iter(report["strategies"].values()), {})
     st = report["self_test"]
+    t = turn_totals(report)
     out = []
-    if r.get("graded"):
-        out += [["Routing accuracy", f"{r['matched']}/{r['graded']}"], ["Under / over-routed", f"{r['under']} / {r['over']}"]]
-    if r:
-        out += [["Tokens in / out", f"{r['input_tokens']:,} / {r['output_tokens']:,}"], ["Latency / answer", _ms(r["latency_ms"])],
-                ["Cost (router)", f"${r['cost_usd']:.5f}"]]
+    if t["graded"]:
+        out += [["Routing accuracy", f"{t['matched']}/{t['graded']}"]]
+    if t["turns"]:
+        out += [["Tokens in / out (all calls)", f"{t['tok_in']:,} / {t['tok_out']:,}"],
+                ["Cost (answers + reader)", f"${t['cost']:.5f}"]]
+    if t["graded"]:
+        out += [["Under / over-routed", f"{t['under']} / {t['over']}"]]
+    if t["turns"]:
+        out += [["Reasoning tokens", f"{t['reasoning']:,}"]]
+        if t["cached"]:
+            out += [["Cached input tokens", f"{t['cached']:,}"]]
+        out += [["Reader (signal) cost", f"${t['reader_cost']:.5f} · {t['reader_in']:,} in / {t['reader_out']:,} out"],
+                ["Latency / answer", _ms(t["ms"] / t["turns"])]]
+        if t["ttft"]:
+            out += [["Time to first token", _ms(sum(t["ttft"]) / len(t["ttft"]))]]
     return out + [["False claims caught", f"{st['caught']}/{st['total']}"]]
 
 
@@ -43,7 +96,7 @@ def _scenario_card(report: dict, providers) -> dict:
     sc = report["scenarios"]
     ok = sum(1 for s in sc if s["as_expected"])
     st = report["self_test"]
-    cost = report["strategies"].get("router", {}).get("cost_usd", 0)
+    cost = turn_totals(report)["cost"]
     reader = report.get("reader", "keywords")
     sim = report["simulated"]
     return {
@@ -77,6 +130,18 @@ def _compare_card(report: dict, providers) -> dict:
     }
 
 
+def _demo_cost(res: list) -> float:
+    """Cost of the answers in a demo run, from the token counts the API reported."""
+    from src.eval.runner import _cost
+    total = 0.0
+    for r in res:
+        for t in r["turns"]:
+            u = t.get("tokens") or {}
+            total += _cost(t["tier"], u.get("prompt_tokens", 0), u.get("completion_tokens", 0),
+                           (u.get("prompt_tokens_details") or {}).get("cached_tokens", 0))
+    return total
+
+
 def _demos_card(report: dict, providers) -> dict:
     from src.eval.demos import BY_ID
     res = [{"name": BY_ID.get(r["id"], {}).get("name", r["id"])} | r for r in report["demos"]]
@@ -87,12 +152,14 @@ def _demos_card(report: dict, providers) -> dict:
         "description": (f"Fixed script, real model answers: {res[0]['title']}." if len(res) == 1 else
                         "Fixed scripts, real model answers: 2 success, 2 known failures, 1 planted false claim."),
         "headline": " · ".join(f"{r['label']}" for r in res),
-        "chips": [f"{good}/{len(res)} behaved as documented"], "cost_usd": 0, "simulated": False, "reader": "",
+        "chips": [f"{good}/{len(res)} behaved as documented"], "cost_usd": _demo_cost(res), "simulated": False, "reader": "",
         "personas": [r.get("name", r["id"]) for r in res],
         "flag": "fail" if any(r["label"] == "KNOWN GAP" for r in res) else "fake" if len(res) == 1 and res[0]["label"] == "CAUGHT" else "",
         "metrics": [[r.get("name", r["id"]), f"{r['label']} · {' > '.join(t['tier'] for t in r['turns'])}"] for r in res]
         + [["Latency / answer", _ms(sum(t["latency_ms"] for r in res for t in r["turns"]) / max(1, sum(len(r["turns"]) for r in res)))],
-           ["Tokens (total)", f"{sum(t['tokens'].get('total_tokens', 0) for r in res for t in r['turns']):,}"]],
+           ["Tokens (total)", f"{sum(t['tokens'].get('total_tokens', 0) for r in res for t in r['turns']):,}"],
+           ["Reasoning tokens", f"{sum((t['tokens'].get('completion_tokens_details') or {}).get('reasoning_tokens', 0) for r in res for t in r['turns']):,}"],
+           ["Cost (answers)", f"${_demo_cost(res):.5f}"]],
         "models": report.get("models", {}), "source": where(providers),
     }
 
@@ -103,8 +170,14 @@ def build(report: dict, name: str, providers: dict | None = None, created: str |
     run_n = os.environ.get("RUN_N")                    # repeat runs of the same test get "· run N" in the title
     if run_n:
         card["title"] += f" · run {run_n}"
+    live = src == "api" and not card["simulated"]
+    if live:                                           # which mode and how hard each tier thought are part of the record
+        efforts = " · ".join(f"{tier} {effort}" for tier, effort in config.REASONING.items())
+        card["mode"], card["efforts"] = config.MODE, dict(config.REASONING)
+        card["chips"] = [*card.get("chips", []), config.MODE.title()]
+        card["metrics"] = [*card.get("metrics", []), ["Mode", config.MODE.title()], ["Reasoning effort", efforts]]
     card["run_on"] = ("Simulator · no model calls" if card["simulated"] else
-                      f"Meta Model API · {config.META_BASE_URL}" if src == "api" else "Not run on a model API")
+                      f"Meta Model API · {config.META_BASE_URL} · {config.MODE} mode" if src == "api" else "Not run on a model API")
     return {"id": name, "created": created or datetime.now(timezone.utc).isoformat(timespec="seconds"),
             **card, "report": report}
 
