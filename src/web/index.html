@@ -279,7 +279,7 @@ main{flex:1;min-height:0;display:grid}
 .hope .hr{display:grid;grid-template-columns:110px 1fr;gap:10px}.hope .hr>b{color:var(--muted);font-weight:600;font-size:12px}.hope .btn{align-self:flex-start}
 .modesw{margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
 .modesw button{background:var(--panel);border:0;color:var(--muted);font:inherit;font-size:12px;padding:9px 14px;cursor:pointer}.modesw button+button{border-left:1px solid var(--line)}
-.modesw button.on{background:#3ddc8420;color:var(--green)}.modesw button[data-mode=online].on{background:#ffb02022;color:var(--amber)}.modesw button:disabled{cursor:default}
+.modesw button.on{background:#3ddc8420;color:var(--green)}.modesw button[data-mode=contributor].on{background:#ffb02022;color:var(--amber)}.modesw button:disabled{cursor:default}
 .modenote{margin:-6px 0 4px}
 .lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}.lcard{background:#0e131c;border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
 .basis{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
@@ -533,17 +533,17 @@ td{padding:5px 7px;border-bottom:1px solid #1a2130;vertical-align:top}
           <p class="note" id="public-note" hidden>Public demo: session ids are random and private.</p></section>
         <section class="pn"><header><svg class="ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><b>Where your data lives</b></header>
           <div class="facts"><div><b>On this machine</b><span>Profiles, notes and saved chats are stored locally.</span></div>
-            <div><b>Never shared</b><span>Nothing is sent anywhere unless a tier is set to the cloud.</span></div>
+            <div><b>Sent to Meta</b><span>Each message goes to the Meta Model API. In Standard mode it is not used to train Meta models; in Contributor mode it may be.</span></div>
             <div><b>Yours to delete</b><span>Saved chats expire after 10 days unless you keep them.</span></div></div></section>
       </div></div>
 
     <div data-panel="reports">
       <div class="sechead"><span class="ib pink"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></span>
-        <div><h3>Reports · saved test runs</h3><p>Every saved run: which models, which personas, where it ran and what it measured. Token Factory runs first, then local runs. <b>More details</b> opens the full record.</p></div></div>
+        <div><h3>Reports · saved test runs</h3><p>Every saved run: which models, which personas, where it ran and what it measured. Runs on the Meta models come first. <b>More details</b> opens the full record.</p></div></div>
       <div id="rpanel"></div></div>
     <div data-panel="budget">
       <div class="sechead"><span class="ib green"><svg class="ico" viewBox="0 0 24 24"><path d="M3 7h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7l12-3v3M16 13.5h2"/></svg></span>
-        <div><h3>Budget <span class="note">· simulated wallet, no real money</span></h3><p>Set a $ limit and the router plans every answer inside it. Costs are real token counts × Token Factory list prices.</p></div></div>
+        <div><h3>Budget <span class="note">· simulated wallet, no real money</span></h3><p>Set a $ limit and the router plans every answer inside it. Costs are real token counts × Meta list prices.</p></div></div>
       <div class="two">
         <section class="pn"><header><svg class="ico" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg><b>Limit</b></header>
           <div class="field"><span class="note">Limit $</span>
@@ -570,7 +570,7 @@ td{padding:5px 7px;border-bottom:1px solid #1a2130;vertical-align:top}
     <div data-panel="models">
       <div class="sechead"><span class="ib pink"><svg class="ico" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></svg></span>
         <div><h3>Models</h3><p>Which model serves each tier, where it runs, and whether it thinks before answering. Change them in <b>models.toml</b>.</p></div>
-        <div class="modesw" id="modeSwitch" role="group" aria-label="Where the models run"><button data-mode="offline">Local · Ollama</button><button data-mode="online">Token Factory</button></div></div>
+        <div class="modesw" id="modeSwitch" role="group" aria-label="Meta Model API mode"><button data-mode="standard">Standard</button><button data-mode="contributor">Contributor</button></div></div>
       <div class="note modenote" id="modeNote" hidden></div>
       <div id="models"></div></div>
 
@@ -615,7 +615,7 @@ td{padding:5px 7px;border-bottom:1px solid #1a2130;vertical-align:top}
       <section class="pn maker"><div class="mk-av">OR</div>
         <div class="mk-body"><span class="mk-eye">Built by</span><b class="mk-name">Omkar Ramesh</b>
           <span class="note">AI engineer who ships end to end: interfaces, APIs, data pipelines and deployment.</span></div>
-        <div class="mk-side"><span class="mk-tag">Nebius × NVIDIA Global AI Hackathon</span>
+        <div class="mk-side"><span class="mk-tag">Meta Global AI Developer Hackathon</span>
           <a class="btn" href="https://github.com/omkar-ramesh" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px"><svg class="ico" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>GitHub</a>
           <a class="btn" href="https://www.linkedin.com/in/omkar-ramesh" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px"><svg class="ico" viewBox="0 0 24 24" style="fill:currentColor;stroke:none"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>LinkedIn</a></div></section></div>
     <div data-panel="accessibility">
@@ -845,9 +845,7 @@ function renderBudget() {
     ? `<div class="bar" style="height:10px"><i style="width:${pct}%;background:${pct > 75 ? "var(--amber)" : "var(--green)"}"></i></div>
        <div class="note" style="margin-top:6px">${usd(spent)} of ${usd(limit)} used · ${usd(Math.max(0, limit - spent))} left${pct > 75 ? " · tight: thinking off, shorter answers" : ""}</div>`
     : `<div class="note">No limit. Spent so far: ${usd(spent)}.</div>`;
-  $("budget-view").insertAdjacentHTML("beforeend", `<div class="note basis">${health && health.mode === "online"
-    ? "<b>Measured</b>: token counts from the API's usage field × list prices. Check the total against the Nebius dashboard: prices are planning figures until then."
-    : "<b>Measured</b>: real token counts from the local model × Token Factory list prices. Local runs cost $0: this is what the same tokens would cost online."}</div>`);
+  $("budget-view").insertAdjacentHTML("beforeend", `<div class="note basis">${"<b>Measured</b>: token counts from the API's usage field × Meta list prices (cached input is billed at the cached rate). Reasoning tokens are billed as output. Check the total against your Meta billing."}</div>`);
   renderGraph();
   if (!accuracy.length) { $("budget-acc").innerHTML = `<div class="note">Predicted vs measured cost appears here for each answer.</div>`; return; }
   const errs = accuracy.filter(a => a.predicted > 0).map(a => Math.abs(a.measured - a.predicted) / a.predicted);
@@ -894,7 +892,7 @@ async function send(text) {
   } catch (e) {
     if (mine !== gen) return;
     pending.remove();
-    add(esc(e.message) + (e.status === 503 ? " Check that the model backend (Ollama or Token Factory) is running."
+    add(esc(e.message) + (e.status === 503 ? " Check that MODEL_API_KEY is set and the Meta Model API is reachable."
         : e.status === 402 ? ` <a href="#" data-goto="budget">Open Settings → Budget</a>` : ""), "note-line err");
   } finally {
     busy = false; $("send").disabled = false;
@@ -967,7 +965,7 @@ function renderStats() {
   $("groups").innerHTML =
     group("Usage · this session", [["Answers", session.calls], ["Signal reads", session.reads], ["Input tokens", session.inp.toLocaleString()], ["Output tokens", session.out.toLocaleString()]])
     + group("Performance", [["Speed", s ? s.toFixed(1) + " tok/s" : "–"], ["Avg TTFT", t ? (t / 1000).toFixed(1) + " s" : "–"], ["Thinking tokens", session.think.toLocaleString()]])
-    + group("Est. cost @ Token Factory", [["This session", money(spent)], ["If all Ultra", money(session.ultraCost)], ["Saved", saves]]);
+    + group("Est. cost @ Meta prices", [["This session", money(spent)], ["If all Ultra", money(session.ultraCost)], ["Saved", saves]]);
 }
 // The report for the signal reader this server actually uses.
 function primary() {
@@ -993,7 +991,7 @@ function renderBanner() {
   b.innerHTML = `<b>Evaluation</b><span class="m">${[part("success", "success"), part("heldout", "held-out", "pass"),
       r.reader === "nano" ? part("failure", "failures re-run") : part("failure", "known failures"),
       `<span class="${r.self_test.caught === r.self_test.total ? "ok" : "bad"}">${r.self_test.caught}/${r.self_test.total}</span> false claims caught`].filter(Boolean).join(" · ")}</span>`
-    + `<span class="spacer"></span><span class="m">${r.simulated ? "simulated answers" : "real answers · local stand-ins"}</span>`;
+    + `<span class="spacer"></span><span class="m">${r.simulated ? "simulated answers" : "real answers · Meta models"}</span>`;
   b.title = `Held-out cases were written after tuning. Ideal tiers are our own annotation. Models: ${tierLine()}`;
 }
 const LABEL_CLASS = { PASS: "ok", CAUGHT: "ok", FIXED: "ok", "KNOWN GAP": "warn", "STILL FAILS": "warn" };
@@ -1011,21 +1009,21 @@ function compareCard(c) {
     ${row("Avg latency", t => (c.avg[t].latency_ms / 1000).toFixed(1) + " s")}
     ${row("Opens with TL;DR (length cases)", t => esc(c.tldr_on_length_cases[t]))}
     ${row("Invented links", t => c.unbacked_sources[t])}</table>
-    <div class="note" style="margin-top:6px">${c.cases} contradiction cases, same prompt for both. Judge: ${esc(c.judge)} (${esc(c.models[c.judge])}), shown the answers without the model names, twice with the order swapped; a verdict that flips counts as a tie (${c.ties}). Local stand-ins: ${esc(c.models[a])} vs ${esc(c.models[b])}.</div></div>`;
+    <div class="note" style="margin-top:6px">${c.cases} contradiction cases, same prompt for both. Judge: ${esc(c.judge)} (${esc(c.models[c.judge])}), shown the answers without the model names, twice with the order swapped; a verdict that flips counts as a tie (${c.ties}). Models: ${esc(c.models[a])} vs ${esc(c.models[b])}.</div></div>`;
 }
 function readerCard() {
   if (!proof || !proof.report || !proof.nano_report) return "";
   const nano = Object.fromEntries(proof.nano_report.scenarios.map(s => [s.id, s]));
   const rows = proof.report.scenarios.filter(s => (s.kind === "failure" || s.kind === "heldout") && nano[s.id]);
   const pass = (rep, kind) => rep.scenarios.filter(s => s.kind === kind && (s.label === "PASS" || s.label === "FIXED")).length;
-  return `<h2>Who reads your messages · keywords vs Nemotron Nano</h2><div class="card">
+  return `<h2>Who reads your messages · keywords vs the Nano tier (Muse Spark)</h2><div class="card">
     <table><tr><th>Scenario</th><th>Keywords</th><th>Nano</th></tr>
     ${rows.map(s => `<tr title="${esc(s.why)}"><td>${esc(s.title)}${s.kind === "heldout" ? ' <span class="note">held-out</span>' : ""}</td>${cell(s)}${cell(nano[s.id])}</tr>`).join("")}</table>
     <div class="note" style="margin-top:6px">Held-out passed: keywords ${pass(proof.report, "heldout")}/7, Nano ${pass(proof.nano_report, "heldout")}/7. Nano costs one short extra call per message (thinking off, cached), and must quote your words as evidence or nothing is learned.</div></div>`;
 }
 /* ---------- reports: a card per saved run, details on click ---------- */
 let reports = null, rfilter = "all", noteCount = 0;
-const SRC = { local: "Local", api: "Token Factory" };
+const SRC = { local: "Local", api: "Meta" };
 const stamp = iso => new Date(iso).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
 function renderEvidence() {
   const box = $("evidenceBlock");
@@ -1033,7 +1031,7 @@ function renderEvidence() {
   const inF = (r, k) => k === "archived" ? r.archived : (k === "all" || r.source === k);
   const n = k => reports.filter(r => inF(r, k)).length;
   const shown = reports.filter(r => inF(r, rfilter));
-  const filters = [["all", "All"], ["local", "Local · while building"], ["api", "Token Factory runs"], ["archived", "Archived"]]
+  const filters = [["all", "All"], ["api", "Meta runs"], ["archived", "Archived"]]
     .map(([k, l]) => `<button class="chipbtn ${rfilter === k ? "on" : ""}" data-rf="${k}">${l} · ${n(k)}</button>`).join("");
   const cardHtml = r => `<button class="rcard" data-report="${esc(r.id)}">
       <div class="f"><span class="src ${esc(r.source)}">${SRC[r.source] || esc(r.source)}</span>${r.archived ? `<span class="src">archived</span>` : ""}<span>${esc(stamp(r.created))}</span></div>
@@ -1043,14 +1041,13 @@ function renderEvidence() {
       <div class="f">${r.chips.map(c => `<span>${esc(c)}</span>`).join(" · ")}${r.cost_usd ? ` · <span>${money(r.cost_usd)}</span>` : ""}</div></button>`;
   box.innerHTML = demosHtml() + `<h2>Reports · click one for the full detail</h2><div class="rfilters">${filters}</div>`
     + (shown.length ? `<div class="rgrid">${shown.map(cardHtml).join("")}</div>`
-       : `<div class="card note">${reports.length ? "No reports in this filter yet." : "No saved reports yet. Run <code>python -m src.eval --save</code> and the card appears here."}${rfilter === "api" ? " Token Factory runs appear once the cloud models have been used." : ""}</div>`)
-    + `<div class="note" style="margin:0 4px 12px">Local = runs made while building, on local stand-in models (or the simulator). Token Factory = runs on the real Nemotron models. The "right tier" for each turn is our own annotation.</div>`;
+       : `<div class="card note">${reports.length ? "No reports in this filter yet." : "No saved reports yet. Run <code>python -m src.eval --save</code> and the card appears here."}${rfilter === "api" ? " Meta runs appear once the Muse models have been used." : ""}</div>`)
+    + `<div class="note" style="margin:0 4px 12px">Meta = runs on the real Muse models. The "right tier" for each turn is our own annotation.</div>`;
 }
-const STARTER_FAVS = ["scenarios-classic_contradiction-nano-local-20261028-1917", "scenarios-aligned_user-nano-local-20261028-1915", "scenarios-invented_source-nano-local-20261028-1931", "scenarios-ho_receipts-nano-local-20261028-1931", "compare-hash_collisions-nano-vs-ultra-local-20261028-1938",
-  "scenarios-classic_contradiction-nano-api-20261028-2020", "scenarios-aligned_user-nano-api-20261028-2019", "scenarios-invented_source-nano-api-20261028-2037", "scenarios-ho_receipts-nano-api-20261028-2037", "compare-hash_collisions-nano-vs-ultra-api-20261028-2038"];
+const STARTER_FAVS = [];
 let rsize = [10, 20, 30].includes(+store.get("rsize")) ? +store.get("rsize") : 10;
 const rpage = {};
-const API_TARGET = 512;      // planned Token Factory runs; the target label hides itself once the count reaches it
+const API_TARGET = 0;        // no planned run count: the target label stays hidden
 let rview = store.get("rview") === "list" ? "list" : "grid";
 const flagIcon = r => r.flag === "fail" ? ` <span class="flag bad" title="This test failed or hit a known limit" aria-label="Failed">⚠</span>` : r.flag === "fake" ? ` <span class="flag warn" title="A false claim was planted and caught" aria-label="False claim">?</span>` : "";
 const rmeta = () => { try { const v = store.get("rmeta"); return v === null ? Object.fromEntries(STARTER_FAVS.map(id => [id, { fav: true }])) : JSON.parse(v || "{}"); } catch (e) { return {}; } };
@@ -1077,14 +1074,11 @@ function renderReportsPanel() {
     return `<section class="rgroup"><header><b>${title}</b><span class="runon">${runon}</span><span class="note">${list.length} run${list.length === 1 ? "" : "s"}${src === "api" && list.length < API_TARGET ? ` · target ${API_TARGET}` : ""}</span>${list.length ? `<div class="rctl">${view}${list.length > 10 ? sel : ""}</div>` : ""}</header>
       ${list.length ? `<div class="${rview === "list" ? "rlist" : "rgrid rsq"}">${list.slice((pg - 1) * rsize, pg * rsize).map(rview === "list" ? lr : mc).join("")}</div>${nav}` : `<div class="pn note">${empty}</div>`}</section>`;
   };
-  const hw = (health && health.hardware) || "local GPU";
   const cnt = f => reports.filter(f).length, arch = cnt(r => r.archived);
-  const sum = `<div class="rsum"><b>${reports.length} saved run${reports.length === 1 ? "" : "s"}</b><span>·</span><span>${cnt(r => r.source === "local")} local</span><span>·</span><span>${cnt(r => r.source === "api")} Token Factory</span>${arch ? `<span>·</span><span>${arch} archived</span>` : ""}<span class="note" style="margin-left:auto">Token Factory runs appear after the live run on the Nemotron models.</span></div>`;
-  const localEmpty = arch ? `No new local runs since the last archive. The ${arch} earlier local run${arch === 1 ? " is" : "s are"} under <b>Archived</b> below.` : "No local runs saved yet.";
-  box.innerHTML = sum + grp("api", "Token Factory · real Nemotron models", `Nebius Token Factory API${health && health.nebius_key_set ? " · key set" : ""}`,
-      "No Token Factory runs yet. They appear here after the live run on the Nemotron models.")
-    + grp("local", "Local · while building", `${esc(hw)} · Ollama`, localEmpty)
-    + grp("archived", "Archived · earlier local runs", "kept as evidence", "Nothing archived.");
+  const sum = `<div class="rsum"><b>${reports.length} saved run${reports.length === 1 ? "" : "s"}</b><span>·</span><span>${cnt(r => r.source === "api")} on Meta</span>${arch ? `<span>·</span><span>${arch} archived</span>` : ""}<span class="note" style="margin-left:auto">Meta runs appear after the live run on the Muse models.</span></div>`;
+  box.innerHTML = sum + grp("api", "Meta Model API · real Muse models", `Meta Model API${health && health.api_key_set ? " · key set" : ""}`,
+      "No Meta runs yet. They appear here after the live run on the Muse models.")
+    + grp("archived", "Archived", "kept as evidence", "Nothing archived.");
 }
 /* ---------- demo profiles: scripted, real answers, graded from what happened ---------- */
 let demoList = [];
@@ -1238,7 +1232,7 @@ function renderTiles() {
   const lim = wallet.limit_usd, spent = wallet.spent_usd, pct = lim ? Math.min(100, 100 * spent / lim) : 0;
   const kept = memory.items.filter(i => i.kept).length;
   const tiers = health ? Object.entries(health.tiers) : [];
-  const cloud = tiers.filter(([, v]) => v.provider !== "ollama").length;
+  const cloud = tiers.length;
   const rep = reports || [];
   const kpi = (go, icon, k, v, s, accent) => `<button class="kpi ${accent}" data-go="${go}"><span class="ib">${ico(icon)}</span>
     <span class="kt"><span class="k">${k}</span><span class="v">${v}</span><span class="s">${s}</span></span></button>`;
@@ -1252,13 +1246,13 @@ function renderTiles() {
       ${kpi("budget", "wallet", "Budget", lim ? usd(Math.max(0, lim - spent)) : "No limit", lim ? `left of ${usd(lim)}` : `${usd(spent)} spent so far`, lim && pct > 75 ? "amber" : "green")}
       ${kpi("memory", "box", "Memory", memory.items.length, `${kept} kept · rest delete after ${days(memory.retention_days)}`, "blue")}
       ${kpi("notes", "note", "Notes", noteCount, "learned about you, zero tokens", "green")}
-      ${kpi("reports", "shield", "Reports", rep.length, `${rep.filter(r => r.source === "local").length} local · ${rep.filter(r => r.source === "api").length} Token Factory`, "pink")}
+      ${kpi("reports", "shield", "Reports", rep.length, `${rep.filter(r => r.source === "api").length} on Meta`, "pink")}
     </div>
     <div class="pgrid">
       ${panel("models", "chip", "Models", tiers.length ? tiers.map(([t, v]) => `<div class="mrow"><span class="pill ${t}">${t}</span><span class="mn">${esc(v.model)}</span>
-          <span class="where">${ico(v.provider === "ollama" ? "laptop" : "cloud")}${v.provider === "ollama" ? "this computer" : "Token Factory"}</span>
-          <span class="think ${v.reasoning === "off" ? "off" : "on"}">${v.reasoning === "off" ? "thinking off" : "thinking on"}</span></div>`).join("")
-          + `<p class="note" style="margin:8px 0 0">${cloud ? `${cloud} of ${tiers.length} tiers use the cloud: those calls spend credits.` : "All local: no cloud calls, no credits used."}</p>` : `<p class="note">Server not reachable.</p>`)}
+          <span class="where">${ico("cloud")}Meta Model API</span>
+          <span class="think ${v.reasoning === "minimal" ? "off" : "on"}">${esc(v.reasoning)} reasoning</span></div>`).join("")
+          + `<p class="note" style="margin:8px 0 0">${cloud} of ${tiers.length} tiers call the Meta Model API: those calls spend credits.</p>` : `<p class="note">Server not reachable.</p>`)}
       ${panel("budget", "wallet", "Budget", lim
         ? `<div class="gauge"><i style="width:${pct}%" class="${pct > 75 ? "hot" : ""}"></i></div><div class="gl"><span>${usd(spent)} spent</span><span>${usd(Math.max(0, lim - spent))} left</span></div>
            <p class="note" style="margin:8px 0 0">A simulated wallet: the router plans every answer inside it.</p>`
@@ -1440,23 +1434,21 @@ document.addEventListener("click", async e => {
 });
 
 function showStatus(h) {
-  $("status").textContent = !h ? "● backend unreachable" : h.mode === "online" ? "● online · Token Factory" : "● online · local";
-  $("status").className = "pill " + (!h ? "bad" : h.mode === "online" ? "warn" : "ok");
+  $("status").textContent = !h ? "● backend unreachable" : h.mode === "contributor" ? "● online · Meta · Contributor" : "● online · Meta · Standard";
+  $("status").className = "pill " + (!h ? "bad" : h.mode === "contributor" ? "warn" : "ok");
 }
 function renderMode() {
   if (!health) return;
   showStatus(health);
   document.querySelectorAll("#modeSwitch [data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === health.mode));
-  const lock = health.online_blocker && health.mode !== "online";
-  $("modeNote").hidden = !(lock || health.public_demo);
-  $("modeNote").textContent = health.public_demo ? "The mode switch is off in the public demo." : `Online is locked: ${health.online_blocker}`;
-  $("modeSwitch").querySelector("[data-mode=online]").title = lock ? health.online_blocker : "";
+  $("modeNote").hidden = !(health.api_blocker || health.public_demo);
+  $("modeNote").textContent = health.public_demo ? "The mode switch is off in the public demo." : `The Meta Model API is not ready: ${health.api_blocker}`;
 }
 document.addEventListener("click", async e => {
   const b = e.target.closest("#modeSwitch [data-mode]"); if (!b || b.classList.contains("on")) return;
-  const online = b.dataset.mode === "online";
-  if (online && !confirm("Online mode sends every answer to Nebius Token Factory and spends credits. Switch?")) return;
-  try { health = await api("/mode", { mode: b.dataset.mode, confirm: online }); toast(`Now ${health.mode}: ${Object.values(health.tiers).map(t => t.model).join(" · ")}`); renderSettings(); renderTiles(); }
+  const contributor = b.dataset.mode === "contributor";
+  if (contributor && !confirm("Contributor mode is cheaper, but Meta may use your content to train its models. Switch?")) return;
+  try { health = await api("/mode", { mode: b.dataset.mode, confirm: contributor }); toast(`Now ${health.mode}: ${Object.values(health.tiers).map(t => t.model).join(" · ")}`); renderSettings(); renderTiles(); }
   catch (err) { toast(err.message); }
 });
 
@@ -1479,14 +1471,14 @@ const TOUR = [
     <pre>{ careful:  ["Hope", "Jordan"],
   slip up:  ["Casey", "Sam"],
   fakes it: ["Kai"] }</pre><p>When one fails, <b>Hope</b> reviews it, explains why and proposes a fix, at 0 tokens.</p>` },
-  { view: "proof", at: "#evidenceBlock .rfilters", title: "Proof · report area", body: `<p>Every saved test run. <b>Token Factory</b> runs are on the real Nemotron models; <b>Local</b> runs were made on this computer.</p>
+  { view: "proof", at: "#evidenceBlock .rfilters", title: "Proof · report area", body: `<p>Every saved test run on the Meta models. <b>Archived</b> runs are older ones kept as evidence.</p>
     <p>Click a card for the full record: every turn, the tier, the reason and the answer.</p>` },
   { view: "settings", sec: "overview", at: "[data-panel=overview]", title: "Settings · Overview", body: `<p>Everything at a glance: who you are, budget, memory, notes, reports and which models are running.</p>` },
   { view: "settings", sec: "profile", at: "[data-panel=profile]", title: "Settings · Profile", body: `<p>Pick a persona to test as, read their write-up, then <b>Activate</b>. Or stay the <b>Normal user</b>.</p>` },
   { view: "settings", sec: "reports", at: "[data-panel=reports]", title: "Settings · Reports", body: `<p>The same saved runs as Proof, with filters and the full details.</p>` },
   { view: "settings", sec: "budget", at: "[data-panel=budget]", title: "Settings · Budget", body: `<p>A pretend wallet. Set a limit and the router plans every answer inside it:</p>
     <pre>{ tight: "step down a tier", empty: "stop" }</pre><p><b>Predicted</b> is a guess before the call; <b>measured</b> uses the real token counts.</p>` },
-  { view: "settings", sec: "models", at: "[data-panel=models]", title: "Settings · Models", body: `<p>Which model answers for each tier. <b>Offline</b> runs here on this computer; <b>Online</b> uses Nebius Token Factory and spends credits.</p>
+  { view: "settings", sec: "models", at: "[data-panel=models]", title: "Settings · Models", body: `<p>Which Meta model answers for each tier, and how hard it thinks. <b>Standard</b> keeps your content out of training; <b>Contributor</b> is cheaper but lets Meta train on it.</p>
     <p>Engineers swap models in <code>models.toml</code>.</p>` },
   { view: "settings", sec: "memory", at: "[data-panel=memory]", title: "Settings · Memory", body: `<p>Past chats, kept 10 days unless you press <b>Keep</b>. <b>Team lessons</b> show what each persona taught Hope.</p>` },
   { view: "settings", sec: "notes", at: "[data-panel=notes]", title: "Settings · Notes", body: `<p>Plain notes on what it learned about you, written without any AI call. Tick, save or delete them; there's a 10 second undo.</p>` },
@@ -1556,9 +1548,9 @@ const TUT = [
   { id: "three-views", cat: "start", title: "The three views", go: { view: "chat", at: "#nav-main" },
     body: "The left sidebar switches what you see. <b>Chat</b> is the conversation with the mirror. <b>Chat + Proof</b> puts the evidence beside it. <b>Proof</b> shows the test results on their own.",
     points: ["Chat", "Chat + Proof", "Proof"] },
-  { id: "status-pill", cat: "start", title: "Local or Token Factory", go: { view: "chat", at: "#status" },
-    body: "The pill next to the title shows where the models run. <b>Local</b> means on this computer, with no cost. <b>Token Factory</b> means Nebius, which spends credits.",
-    points: ["Green: local", "Amber: Token Factory", "Red: the server can't be reached"] },
+  { id: "status-pill", cat: "start", title: "Standard or Contributor", go: { view: "chat", at: "#status" },
+    body: "The pill next to the title shows which Meta Model API mode is on. <b>Standard</b> keeps your content out of training. <b>Contributor</b> is cheaper, but Meta may use your content to train its models.",
+    points: ["Green: Standard", "Amber: Contributor", "Red: the server can't be reached"] },
   { id: "send", cat: "chat", title: "Sending a message", go: { view: "chat", at: "#form" },
     body: "Type in the box at the bottom and press <b>Send</b> or Enter. Each answer is tagged with the model that wrote it and how long it took.",
     points: ["Message box", "Send", "Model tag on every answer"] },
@@ -1603,13 +1595,13 @@ const TUT = [
     points: ["Why it failed", "The proposed fix", "Apply to keep it"] },
   { id: "reports", cat: "proof", title: "Reports", go: { view: "settings", sec: "reports" },
     body: "Every saved test run, as a card. <b>Details</b> opens a summary on the left and the full report on the right. Older runs sit under <b>Archived</b>.",
-    points: ["Token Factory runs", "Local runs", "Archived"] },
+    points: ["Meta runs", "Archived"] },
   { id: "budget", cat: "settings", title: "Budget", go: { view: "settings", sec: "budget" },
     body: "A pretend wallet. Set a limit and the router plans every answer inside it: it steps down a tier, turns thinking off, or stops before overspending.",
     points: ["Quick set", "Steps down a tier", "Never overspends"] },
   { id: "models", cat: "settings", title: "Models", go: { view: "settings", sec: "models" },
-    body: "Which model answers for each tier. The switch picks <b>Offline</b> (this computer) or <b>Online</b> (Token Factory). Online stays locked until the model ids are confirmed.",
-    points: ["Offline / Online switch", "Tier cards", "Signal reader"] },
+    body: "Which model answers for each tier. The switch picks <b>Standard</b> or <b>Contributor</b> mode. Each tier also has a reasoning effort: the router spends thinking only where it is unsure about you.",
+    points: ["Standard / Contributor switch", "Tier cards", "Signal reader"] },
   { id: "memory", cat: "settings", title: "Memory", go: { view: "settings", sec: "memory" },
     body: "Saved conversations are deleted after 10 days unless you press <b>Keep</b>. Team lessons show what each persona taught Hope.",
     points: ["Keep", "Open or download", "Team lessons"] },
@@ -1794,23 +1786,17 @@ function jumpTo(id) {
 function renderSettings() {
   if (!health) { $("models").innerHTML = `<div class="pn note">The server didn't answer.</div>`; return; }
   const roles = { nano: "Fast and cheap: handles most answers.", super: "Balanced: a first contradiction or a tight budget.", ultra: "Deep reasoning: strong or repeated contradictions." };
-  const tf = health.token_factory || [], tfTier = tf.filter(m => m.tier), cand = tf.filter(m => !m.tier);
+  const mm = health.meta_models || [];
   const price = m => m.price ? `<span class="row" style="gap:10px"><span>in <b>$${m.price.in.toFixed(2)}</b></span><span>out <b>$${m.price.out.toFixed(2)}</b></span><span class="note">per 1M tokens</span></span>` : "";
-  const tiers = Object.entries(health.tiers), local = tiers.every(([, v]) => v.provider === "ollama");
   renderMode();
-  $("models").innerHTML = `<section class="pn"><header>${ico("cloud")}<b>Nebius Token Factory</b><span class="note" style="margin-left:auto">${health.nebius_key_set ? "API key set · cloud calls off until enabled" : "No API key set"}</span></header>
-      <p class="note" style="margin:0 0 10px">The NVIDIA Nemotron models behind the live run. Priority: these are what the router is built for.</p>
-      <div class="tiercards">${tfTier.map(m => `<div class="tiercard ${esc(m.tier)}"><span class="pill ${esc(m.tier)}" style="align-self:flex-start">${esc(m.tier)}</span>
-        <div class="mn">${esc(m.name)}</div><div class="role">${esc(m.role)}</div>${price(m)}</div>`).join("")}</div>
-      ${cand.map(m => `<p class="note" style="margin:10px 0 0">${esc(m.name)}: ${esc(m.role)}</p>`).join("")}
-      <p class="note" style="margin:8px 0 0">Prices are planning figures from <code>.env</code>; exact API model ids are confirmed before the live run.</p></section>
-    <section class="pn"><header>${ico("laptop")}<b>Local · this computer</b><span class="note" style="margin-left:auto">${esc(health.hardware || "")} · Ollama</span></header>
-      <div class="tiercards">${tiers.map(([t, v]) => `<div class="tiercard ${esc(t)}"><span class="pill ${esc(t)}" style="align-self:flex-start">${esc(t)}</span>
-        <div class="mn">${esc(v.model)}</div><div class="role">${esc(roles[t] || "")}</div>
-        <div class="row">${ico(v.provider === "ollama" ? "laptop" : "cloud")}${v.provider === "ollama" ? "Runs on this computer (Ollama)" : "Nebius Token Factory"}</div>
-        <div class="row">${ico("chip")}Thinking ${v.reasoning === "off" ? "off" : "on"}</div></div>`).join("")}</div></section>
-    <section class="pn"><header>${ico("note")}<b>Signal reader</b></header><p class="note" style="margin:0"><b>${esc(health.signal_reader)}</b>${health.signal_reader === "nano" ? ": Nemotron Nano reads each message with thinking off, keywords as the fallback." : ": keyword matching, no model call."}
-      ${local ? "All models run locally: no cloud calls, no credits used." : "Some tiers use the cloud: those calls spend credits."}</p></section>`;
+  $("models").innerHTML = `<section class="pn"><header>${ico("cloud")}<b>Meta Model API</b><span class="note" style="margin-left:auto">${health.api_key_set ? "API key set" : "No API key set"} · ${esc(health.mode)} mode</span></header>
+      <p class="note" style="margin:0 0 10px">The Muse models behind every tier. Reasoning effort is the router's dial: Muse Spark always reasons, so the router buys more or less of it.</p>
+      <div class="tiercards">${mm.map(m => { const t = (health.tiers || {})[m.tier] || {}; return `<div class="tiercard ${esc(m.tier)}"><span class="pill ${esc(m.tier)}" style="align-self:flex-start">${esc(m.tier)}</span>
+        <div class="mn">${esc(t.model || m.name)}</div><div class="role">${esc(m.role)}</div>
+        <div class="row">${ico("chip")}Reasoning effort: ${esc(t.reasoning || "")}</div>${price(m)}</div>`; }).join("")}</div>
+      <p class="note" style="margin:8px 0 0">Prices come from the Meta docs and live in <code>models.toml</code>. Reasoning tokens are billed as output; cached input is billed at the cached rate.</p></section>
+    <section class="pn"><header>${ico("note")}<b>Signal reader</b></header><p class="note" style="margin:0"><b>${esc(health.signal_reader)}</b>${health.signal_reader === "nano" ? ": the Nano tier reads each message at minimal reasoning, keywords as the fallback." : ": keyword matching, no model call."}
+      Every call to the Meta Model API spends credits.</p></section>`;
 }
 
 /* ---------- boot and events ---------- */
@@ -1912,7 +1898,7 @@ async function playDemo() {
     renderMirror(await api("/update-style", { user_id: user, dimension: "length", value: "concise" }));
     thread.innerHTML = "";
     add("Demo: you said you prefer <b>concise</b> answers (the ring on Length). Now you keep asking for detail…", "note-line");
-    await send("How does a mixture-of-experts model like Nemotron decide which experts handle a token? Explain in more detail please");
+    await send("How does a mixture-of-experts model decide which experts handle a token? Explain in more detail please");
     await send("Can you elaborate on why the KV cache is the memory bottleneck at long context?");
     await send("Go deeper on how FP8 quantization keeps accuracy on a GPU like Blackwell");
     await send("Walk me through tensor parallelism step by step, in depth");

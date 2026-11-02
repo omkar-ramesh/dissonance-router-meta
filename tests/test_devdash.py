@@ -19,7 +19,7 @@ STATS = {
 
 @pytest.fixture
 def rec(tmp_path):
-    return RunRecorder("scenarios", {"nano": "m (ollama)"}, history_dir=tmp_path)
+    return RunRecorder("scenarios", {"nano": "m (meta)"}, history_dir=tmp_path)
 
 
 def test_progress_and_counts(rec):
@@ -49,8 +49,8 @@ def test_failed_step_makes_run_failed(rec):
 
 
 def test_error_status(rec):
-    rec.finish(error="Ollama is down")
-    assert (rec.state["status"], rec.state["error"]) == ("error", "Ollama is down")
+    rec.finish(error="The model API is down")
+    assert (rec.state["status"], rec.state["error"]) == ("error", "The model API is down")
 
 
 def test_totals_aggregate_model_calls_only(rec):

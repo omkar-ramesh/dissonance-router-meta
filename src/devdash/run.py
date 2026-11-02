@@ -2,7 +2,7 @@
 
     python -m src.devdash.run --suite all        # pytest + live-model scenarios
     python -m src.devdash.run --suite pytest
-    python -m src.devdash.run --suite scenarios  # real model calls (needs Ollama)
+    python -m src.devdash.run --suite scenarios  # real model calls (needs MODEL_API_KEY)
 
 Every step is recorded as it happens (see store.py) and echoed to the terminal.
 """

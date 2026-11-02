@@ -6,8 +6,8 @@ where it doesn't, and whether it ever states something untrue.
 
 ```bash
 python -m src.eval                                   # simulated model, keyword reader
-python -m src.eval --live --reader nano --no-compare  # real models, Nemotron Nano reads the messages
-python -m src.eval --live                            # also prices always-Nano / always-Ultra (slow locally)
+python -m src.eval --live --reader nano --no-compare  # real models, the Nano tier reads the messages
+python -m src.eval --live                            # also prices always-Nano / always-Ultra
 python -m src.eval compare                           # blind Nano-vs-Ultra answer comparison (real models)
 ```
 
@@ -22,7 +22,7 @@ and never edited after the first run. They are graded like the success cases, an
 failures stay in the report. This is the answer to "the same person wrote the router and
 the answer key": these cases were not tuned against.
 
-## Who reads the messages: keywords vs Nemotron Nano
+## Who reads the messages: keywords vs the Nano tier
 
 The same scenarios run with each signal reader. The keyword reader's known failures
 (implicit complaint, another language, negation, quoted words) are re-run with Nano and
@@ -102,9 +102,9 @@ small (*under*) or bigger than needed (*over*, wasted spend).
   tier for each turn, so "router 26/26" shows the router follows its design, not that the
   design is correct for everyone. The held-out set and the blind comparison exist to test
   outside that loop; the honest final test is real users.
-- **The comparison has one judge model and six cases,** and locally the tiers are stand-ins
-  (Nemotron Nano 4B vs DeepSeek-R1 32B, judged by Nemotron Nano 30B). It says "on these
-  cases, with these models", not "in general".
+- **The comparison has one judge model and six cases.** It says "on these cases, with these
+  models", not "in general". On Meta's models the tiers differ by reasoning effort (and Muse
+  Wonder for Ultra), so the comparison measures what extra thinking buys.
 - **Simulated runs say nothing about model quality.** Answers and token counts are
   simulated, format checks are skipped, and costs only compare strategies with each other.
   Real numbers come from `--live`.

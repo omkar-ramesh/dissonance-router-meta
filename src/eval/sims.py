@@ -16,7 +16,7 @@ def _tokens(text: str) -> int:
 class SimLLM:
     simulated = True
 
-    def chat(self, tier, messages, temperature=0.7):
+    def chat(self, tier, messages, temperature=None):
         last = messages[-1]["content"]
         body = " ".join(["word"] * _WORDS[tier])
         text = f"TL;DR: a short answer.\n\n{body}" if "TL;DR" in last else body
@@ -30,7 +30,7 @@ class SimLLM:
 class LyingLLM(SimLLM):
     """Answers confidently and attaches a source it made up."""
 
-    def chat(self, tier, messages, temperature=0.7):
+    def chat(self, tier, messages, temperature=None):
         result = super().chat(tier, messages, temperature)
         result.text = "It was proposed in 2017 (see https://arxiv.org/abs/2401.99999)."
         return result
@@ -43,5 +43,5 @@ class ForcedTier:
         self.inner, self.tier = inner, tier
         self.simulated = getattr(inner, "simulated", False)
 
-    def chat(self, tier, messages, temperature=0.7):
+    def chat(self, tier, messages, temperature=None):
         return self.inner.chat(self.tier or tier, messages, temperature)

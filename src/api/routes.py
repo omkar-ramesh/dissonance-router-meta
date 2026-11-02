@@ -29,7 +29,7 @@ COMPARE_SOURCES = [_ROOT / "data" / "eval" / "compare.json", _ROOT / "docs" / "c
 
 @router.get("/health")
 def health() -> dict:
-    """Liveness plus which model and backend serves each tier."""
+    """Liveness plus which Meta model serves each tier, and at what reasoning effort."""
     return {
         "status": "ok",
         "tiers": {
@@ -38,22 +38,22 @@ def health() -> dict:
         },
         "signal_reader": config.SIGNAL_EXTRACTOR,
         "public_demo": config.PUBLIC_DEMO,
-        "hardware": config.HARDWARE,
-        "token_factory": [m | {"price": config.PRICES.get(m["tier"])} for m in config.TOKEN_FACTORY_MODELS],
-        "nebius_key_set": bool(config.NEBIUS_API_KEY),
+        "meta_models": [m | {"price": config.PRICES.get(m["tier"])} for m in config.META_MODELS],
+        "api_key_set": bool(config.META_API_KEY),
         "mode": config.MODE,
-        "online_blocker": config.online_blocker(),
+        "api_blocker": config.api_blocker(),
     }
 
 
 @router.post("/mode")
 def set_mode(req: ModeRequest) -> dict:
-    """Switch every tier between the offline (local) and online (Token Factory) profile in models.toml.
-    Online needs the key, confirmed model ids and an explicit `confirm`; it is never available in the public demo."""
+    """Switch every tier between the Standard and Contributor profile in models.toml.
+    Contributor mode is cheaper but lets Meta train on the content, so it needs an explicit `confirm`;
+    neither switch is available in the public demo."""
     if config.PUBLIC_DEMO:
         raise HTTPException(403, "The mode switch is off in the public demo.")
-    if req.mode == "online" and not req.confirm:
-        raise HTTPException(400, "Online mode spends Token Factory credits: send confirm=true to switch.")
+    if req.mode == "contributor" and not req.confirm:
+        raise HTTPException(400, "Contributor mode lets Meta use your content to train its models: send confirm=true to switch.")
     try:
         config.set_mode(req.mode)
     except ValueError as e:
@@ -67,7 +67,7 @@ def proof() -> dict:
     """The latest evaluation reports (see docs/EVAL.md); `null` where none exists.
 
     `report`: scenarios with the keyword signal reader; `nano_report`: the same scenarios
-    read by Nemotron Nano; `compare`: the blind Nano-vs-Ultra answer comparison.
+    read by the Nano tier; `compare`: the blind Nano-vs-Ultra answer comparison.
     Model answers are left out; the page needs verdicts, reason codes and costs, not prose.
     """
     report, source = _load(PROOF_SOURCES)

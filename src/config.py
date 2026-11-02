@@ -12,26 +12,31 @@ DB_PATH = os.getenv("DB_PATH", "data/dissonance.db")
 if not os.path.isabs(DB_PATH):
     DB_PATH = str(ROOT_DIR / DB_PATH)
 
-# Models per tier live in models.toml: an "offline" profile (local Ollama) and an "online" one
-# (Nebius Token Factory). LLM_PROVIDER=nebius in .env still means "online"; MODE picks one explicitly.
+# Models per tier live in models.toml, in two profiles of the Meta Model API: "standard" (your content is
+# not used for training) and "contributor" (cheaper; your content may be used to train Meta models).
+# MODE picks one explicitly.
 TIERS = ("nano", "super", "ultra")
+MODES = ("standard", "contributor")
+EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max")
 try:
     MODELS_FILE = ROOT_DIR / "models.toml"
     _FILE = tomllib.loads(MODELS_FILE.read_text(encoding="utf-8")) if MODELS_FILE.exists() else {}
 except tomllib.TOMLDecodeError as e:
     raise SystemExit(f"models.toml is not valid: {e}")
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
-MODE = "online" if LLM_PROVIDER == "nebius" else os.getenv("MODE", _FILE.get("default_mode", "offline"))
-_DEFAULT = {"nano": ("ollama", "nemotron-3-nano:4b", "off"), "super": ("ollama", "nemotron-3-nano:30b", "off"),
-            "ultra": ("ollama", "deepseek-r1:32b", "on")}
-_PRICE_DEFAULT = {"nano": (0.06, 0.24), "super": (0.30, 0.90), "ultra": (1.00, 3.00)}
+MODE = os.getenv("MODE", _FILE.get("default_mode", "standard"))
+if MODE not in MODES:
+    raise SystemExit(f"MODE must be one of {MODES}, not {MODE!r}")
+# Muse Spark always reasons: the router's dial is how much (reasoning_effort), not on or off.
+_DEFAULT = {"nano": ("muse-spark-1.3", "minimal"), "super": ("muse-spark-1.3", "medium"),
+            "ultra": ("muse-wonder-1.0", "high")}
+_PRICE_DEFAULT = {"nano": (1.25, 4.25, 0.15), "super": (1.25, 4.25, 0.15), "ultra": (4.00, 20.00, 0.20)}
 
 MODEL_TIERS, TIER_PROVIDERS, REASONING, PRICES = {}, {}, {}, {}
 
 
 def _entry(mode: str, tier: str) -> dict:
-    d = _DEFAULT[tier]
-    return {"provider": d[0], "model": d[1], "reasoning": d[2], **_FILE.get(mode, {}).get(tier, {})}
+    d, p = _DEFAULT[tier], _PRICE_DEFAULT[tier]
+    return {"model": d[0], "effort": d[1], "in": p[0], "out": p[1], "cached": p[2], **_FILE.get(mode, {}).get(tier, {})}
 
 
 def apply_mode(mode: str, use_env: bool = False) -> None:
@@ -39,37 +44,34 @@ def apply_mode(mode: str, use_env: bool = False) -> None:
     for tier in TIERS:
         e, up = _entry(mode, tier), tier.upper()
         MODEL_TIERS[tier] = os.getenv(f"MODEL_{up}", e["model"]) if use_env else e["model"]
-        TIER_PROVIDERS[tier] = os.getenv(f"PROVIDER_{up}", e["provider"]) if use_env else e["provider"]
-        REASONING[tier] = os.getenv(f"REASONING_{up}", e["reasoning"]) if use_env else e["reasoning"]
-        price = {**dict(zip(("in", "out"), _PRICE_DEFAULT[tier])), **_FILE.get("prices", {}).get(tier, {})}
-        PRICES[tier] = {"in": float(os.getenv(f"PRICE_{up}_IN", price["in"])), "out": float(os.getenv(f"PRICE_{up}_OUT", price["out"]))}
+        TIER_PROVIDERS[tier] = "meta"
+        REASONING[tier] = os.getenv(f"EFFORT_{up}", e["effort"]) if use_env else e["effort"]
+        PRICES[tier] = {k: float(os.getenv(f"PRICE_{up}_{k.upper()}", e[k])) if use_env else float(e[k])
+                        for k in ("in", "out", "cached")}
 
 
-def online_blocker() -> str:
-    """Why the online profile can't be used right now ('' if it can)."""
-    if not (NEBIUS_API_KEY and NEBIUS_BASE_URL):
-        return "Add NEBIUS_API_KEY and NEBIUS_BASE_URL to .env."
-    if not _FILE.get("online", {}).get("confirmed"):
-        return "Confirm the Token Factory model ids in models.toml (set confirmed = true)."
+def api_blocker() -> str:
+    """Why the Meta Model API can't be used right now ('' if it can)."""
+    if not META_API_KEY:
+        return "Add MODEL_API_KEY to .env."
     return ""
 
 
 def set_mode(mode: str) -> None:
     global MODE
-    if mode not in ("offline", "online"):
-        raise ValueError("mode must be 'offline' or 'online'")
-    if mode == "online" and online_blocker():
-        raise ValueError(online_blocker())
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}")
+    if api_blocker():
+        raise ValueError(api_blocker())
     apply_mode(mode)
     MODE = mode
 
 
-# Fallback context window (tokens) per tier for backends that don't report one.
-# Ollama tiers read the real value from /api/ps; set these for Token Factory models.
-CONTEXT_WINDOWS = {tier: int(os.getenv(f"CTX_{tier.upper()}", "0")) for tier in TIERS}
+# Context window (tokens) per tier: every Muse text model in Model API has 1,048,576.
+CONTEXT_WINDOWS = {tier: int(os.getenv(f"CTX_{tier.upper()}", "1048576")) for tier in TIERS}
 
 # Who reads each message for style requests: "keywords" (fast, English-only phrasings)
-# or "nano" (Nemotron Nano reads it, keywords as the fallback if the call fails).
+# or "nano" (a short Muse Spark call reads it, keywords as the fallback if the call fails).
 SIGNAL_EXTRACTOR = os.getenv("SIGNAL_EXTRACTOR", "nano")
 
 # Public demo mode: private random session ids, a per-IP rate limit, output caps and a daily
@@ -77,7 +79,7 @@ SIGNAL_EXTRACTOR = os.getenv("SIGNAL_EXTRACTOR", "nano")
 PUBLIC_DEMO = os.getenv("PUBLIC_DEMO", "0") == "1"
 # Hosted demo for judges only: when set, every request needs this code (see src/api/gate.py).
 DEMO_ACCESS_CODE = os.getenv("DEMO_ACCESS_CODE", "")
-RATE_LIMIT_PER_MIN =int(os.getenv("RATE_LIMIT_PER_MIN", "6"))
+RATE_LIMIT_PER_MIN = int(os.getenv("RATE_LIMIT_PER_MIN", "6"))
 DAILY_BUDGET_USD = float(os.getenv("DAILY_BUDGET_USD", "1.00"))
 # Max output tokens per answer (0 = no cap). Capped by default only in public demo mode.
 _CAP_DEFAULTS = {"nano": "1500", "super": "2500", "ultra": "4000"} if PUBLIC_DEMO else {}
@@ -90,22 +92,14 @@ MEMORY_RETENTION_DAYS = float(os.getenv("MEMORY_RETENTION_DAYS", "10"))
 API_HOST = os.getenv("API_HOST", "127.0.0.1")
 API_PORT = int(os.getenv("API_PORT", "8000"))
 
-# 127.0.0.1, not "localhost": on Windows every new connection to "localhost" tries IPv6
-# first and costs ~2.2 s before falling back (measured), against 0.16 s for 127.0.0.1.
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").replace("//localhost", "//127.0.0.1")
-NEBIUS_API_KEY = os.getenv("NEBIUS_API_KEY", "")
-# Shown on local reports so numbers are tied to the machine that produced them.
-HARDWARE = os.getenv("HARDWARE_LABEL", "NVIDIA RTX 5090 · 32 GB VRAM")
-# Token Factory models we plan to use, as listed in the Token Factory catalog (Oct 2026).
-# Exact API ids must be confirmed in the catalog before a live run.
-TOKEN_FACTORY_MODELS = [
-    {"tier": "nano", "name": "Nemotron-3-Nano-30B-A3B", "role": "Default tier: aligned users"},
-    {"tier": "super", "name": "Nemotron-3-Super-120B", "role": "Moderate conflict"},
-    {"tier": "ultra", "name": "Nemotron-3-Ultra-550B", "role": "High conflict, reasoning on"},
-    {"tier": "", "name": "Nemotron-3.5-Lightning", "role": "Candidate fast Nano alternative (not wired)"},
+# Meta Model API: an OpenAI-compatible endpoint (https://dev.meta.ai/docs/overview).
+META_API_KEY = os.getenv("MODEL_API_KEY", "") or os.getenv("META_API_KEY", "")
+META_BASE_URL = os.getenv("META_BASE_URL", "https://api.meta.ai/v1")
+# The Models page lists these, with the live price of each tier.
+META_MODELS = [
+    {"tier": "nano", "name": "Muse Spark 1.3", "role": "Default tier: aligned users, minimal reasoning"},
+    {"tier": "super", "name": "Muse Spark 1.3", "role": "Moderate conflict, medium reasoning"},
+    {"tier": "ultra", "name": "Muse Wonder 1.0 (preview)", "role": "High conflict, high reasoning"},
 ]
-NEBIUS_BASE_URL = os.getenv("NEBIUS_BASE_URL", "")
-TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
-# The .env MODEL_* / PROVIDER_* overrides are local-model settings; online uses the ids in models.toml.
-apply_mode(MODE, use_env=MODE != "online")
+apply_mode(MODE, use_env=True)

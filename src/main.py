@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="The Dissonance Router",
-    description="Routes each request to Nemotron Nano, Super or Ultra by how much the user's "
+    description="Routes each request to a Meta Muse tier (Nano, Super or Ultra) by how much the user's "
                 "stated preferences contradict their observed behavior, and explains why.",
     version="0.3.0",
     lifespan=lifespan,

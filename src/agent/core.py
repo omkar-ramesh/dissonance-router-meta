@@ -35,7 +35,7 @@ class Agent:
     def __init__(self, db_path: str, llm: Optional[LLMClient] = None, extractor: Optional[SignalExtractor] = None,
                  memory_dir: Optional[str] = None):
         """`extractor` reads messages for style requests: keywords by default, or a
-        NanoExtractor (Nemotron Nano, keywords as fallback). `memory_dir` holds archived
+        NanoExtractor (a short Muse Spark call, keywords as fallback). `memory_dir` holds archived
         conversations (default: a `memory` folder next to the database)."""
         init_db(db_path)
         self.memory = MemoryStore(db_path, memory_dir or Path(db_path).parent / "memory", config.MEMORY_RETENTION_DAYS)

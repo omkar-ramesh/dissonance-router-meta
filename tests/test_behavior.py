@@ -76,16 +76,16 @@ class TestNanoExtractor:
         fresh = NanoExtractor(FakeLLM(), str(tmp_path / "c.db"))   # cache survives a restart
         assert fresh.extract("I'm lost") == {"length": "detailed"} and not fresh.llm.calls
 
-    def test_asks_with_reasoning_off_and_a_small_cap(self):
+    def test_asks_with_minimal_reasoning_and_a_small_cap(self):
         llm = FakeLLM(["{}"])
         NanoExtractor(llm).extract("What is DNS?")
-        assert llm.calls[0]["reasoning"] == "off" and llm.calls[0]["max_tokens"] <= 100
+        assert llm.calls[0]["reasoning"] == "off" and llm.calls[0]["max_tokens"] <= 400
         assert llm.calls[0]["tier"] == "nano"
 
     def test_falls_back_to_keywords_and_retries_later(self):
         class Down:
             def chat(self, *a, **k):
-                raise LLMError("ollama is not running")
+                raise LLMError("the model API is unreachable")
         x = NanoExtractor(Down())
         assert x.extract("please elaborate") == {"length": "detailed"}    # keyword reader answered
         assert x.fallbacks == 1 and not x._memo                           # not cached: Nano is asked next time
@@ -185,33 +185,51 @@ def _capture():
 
 class TestReasoningSwitch:
     MODELS = {"nano": "n", "super": "s", "ultra": "u"}
+    EFFORT = {"nano": "minimal", "super": "medium", "ultra": "high"}
 
-    def client(self, transport, providers, max_tokens=None):
-        return LLMClient("http://t/v1", self.MODELS, transport=transport, providers=providers,
-                         reasoning={"nano": "off", "super": "off", "ultra": "on"}, max_tokens=max_tokens)
+    def client(self, transport, max_tokens=None):
+        return LLMClient("http://t/v1", self.MODELS, transport=transport, reasoning=self.EFFORT, max_tokens=max_tokens)
 
-    def test_ollama_off_uses_reasoning_effort_none(self):
+    def test_each_tier_sends_its_own_effort(self):
         seen, t = _capture()
-        result = self.client(t, {"nano": "ollama"}).chat("nano", [{"role": "user", "content": "hi"}])
-        assert seen[0]["reasoning_effort"] == "none" and result.reasoning_on is False
+        c = self.client(t)
+        results = [c.chat(tier, [{"role": "user", "content": "hi"}]) for tier in ("nano", "super", "ultra")]
+        assert [b["reasoning_effort"] for b in seen] == ["minimal", "medium", "high"]
+        assert [r.reasoning_on for r in results] == [False, True, True]
+        assert [r.reasoning_effort for r in results] == ["minimal", "medium", "high"]
 
-    def test_nebius_off_uses_the_chat_template_switch(self):
+    def test_off_means_minimal_never_none(self):
         seen, t = _capture()
-        self.client(t, {"nano": "nebius"}).chat("nano", [{"role": "user", "content": "hi"}])
-        assert seen[0]["chat_template_kwargs"] == {"enable_thinking": False}
+        self.client(t).chat("ultra", [{"role": "user", "content": "hi"}], reasoning="off")
+        assert seen[0]["reasoning_effort"] == "minimal"          # Muse Spark rejects "none" with a 400
 
-    def test_ultra_keeps_thinking(self):
+    def test_on_uses_the_tiers_effort_and_at_least_medium(self):
         seen, t = _capture()
-        result = self.client(t, {"ultra": "ollama"}).chat("ultra", [{"role": "user", "content": "hi"}])
-        assert "reasoning_effort" not in seen[0] and result.reasoning_on is True
+        c = self.client(t)
+        c.chat("nano", [{"role": "user", "content": "hi"}], reasoning="on")
+        c.chat("ultra", [{"role": "user", "content": "hi"}], reasoning="on")
+        assert [b["reasoning_effort"] for b in seen] == ["medium", "high"]
+
+    def test_an_explicit_effort_wins(self):
+        seen, t = _capture()
+        self.client(t).chat("nano", [{"role": "user", "content": "hi"}], reasoning="xhigh")
+        assert seen[0]["reasoning_effort"] == "xhigh"
 
     def test_per_call_override_and_output_cap(self):
         seen, t = _capture()
-        c = self.client(t, {"ultra": "ollama"}, max_tokens={"ultra": 4000})
-        c.chat("ultra", [{"role": "user", "content": "hi"}], reasoning="off", max_tokens=50)
+        c = self.client(t, max_tokens={"ultra": 4000})
+        c.chat("ultra", [{"role": "user", "content": "hi"}], max_tokens=50)
         c.chat("ultra", [{"role": "user", "content": "hi"}])
-        assert seen[0]["reasoning_effort"] == "none" and seen[0]["max_tokens"] == 50
-        assert seen[1]["max_tokens"] == 4000
+        assert seen[0]["max_completion_tokens"] == 50 and "max_tokens" not in seen[0]
+        assert seen[1]["max_completion_tokens"] == 4000
+
+    def test_sends_only_parameters_the_api_accepts(self):
+        seen, t = _capture()
+        self.client(t).chat("nano", [{"role": "user", "content": "hi"}])
+        assert "temperature" not in seen[0]                      # Meta recommends leaving it unset
+        assert not {"stop", "logprobs", "logit_bias", "presence_penalty", "frequency_penalty"} & set(seen[0])
+        self.client(t).chat("nano", [{"role": "user", "content": "hi"}], temperature=0.0)
+        assert seen[1]["temperature"] == 0.0
 
 
 # ---------------------------------------------------------------- public demo guard

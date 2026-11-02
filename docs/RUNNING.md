@@ -1,37 +1,21 @@
 # Running the tests yourself
 
-Everything here can be run by hand. Each saved run appears in the app under **Settings → Reports**:
-Token Factory runs on top, local runs below.
+Everything here can be run by hand. Each saved run appears in the app under **Settings → Reports**.
 
 ## 1. Setup (once)
 
 ```bash
 pip install -r requirements.txt
+copy .env.example .env      # cp on macOS/Linux
 ```
 
-**Local models (Ollama).** Install [Ollama](https://ollama.com), then pull the three tier models:
+**Meta Model API (spends credits).** Get a key at [dev.meta.ai](https://dev.meta.ai) and put it in `.env`, never in code:
 
 ```bash
-ollama pull nemotron-3-nano:4b      # nano
-ollama pull nemotron-3-nano:30b     # super
-ollama pull deepseek-r1:32b         # ultra (local stand-in)
+MODEL_API_KEY=...
 ```
 
-Our local runs were made on an **NVIDIA RTX 5090 (32 GB VRAM)**. Smaller GPUs work, but the 30B/32B
-models will be slower or need to be swapped in `.env` (`MODEL_SUPER`, `MODEL_ULTRA`).
-Set `HARDWARE_LABEL` in `.env` so your reports name your machine.
-
-**Nebius Token Factory (optional, spends credits).** Put your key in `.env`, never in code:
-
-```bash
-NEBIUS_API_KEY=...
-LLM_PROVIDER=nebius
-MODEL_NANO=<Token Factory id for Nemotron-3-Nano-30B-A3B>
-MODEL_SUPER=<Token Factory id for Nemotron-3-Super-120B>
-MODEL_ULTRA=<Token Factory id for Nemotron-3-Ultra-550B>
-```
-
-Copy the exact ids from the Token Factory model catalog. The key is never shown in the app or saved in reports.
+The models, reasoning efforts and prices for each tier are in `models.toml`. The key is never shown in the app or saved in reports.
 
 ## 2. Start the app
 
@@ -47,13 +31,13 @@ Open http://localhost:8000. Settings → Profile lists the personas. Pick one, r
 |---|---|---|
 | Unit tests (no models) | `python -m pytest tests -q` | free |
 | Scenarios, simulated answers | `python -m src.eval --save` | free |
-| Scenarios, real models | `python -m src.eval --live --save` | local: free · Token Factory: credits |
-| Scenarios with the Nano signal reader | `python -m src.eval --live --reader nano --save` | as above |
-| Persona demos (Hope, Jordan, Casey, Sam, Kai) | `python -m src.eval.demos --save` | as above |
-| Blind "is Ultra worth it?" comparison | `python -m src.eval compare --save` | as above |
+| Scenarios, real models | `python -m src.eval --live --save` | credits |
+| Scenarios with the Nano signal reader | `python -m src.eval --live --reader nano --save` | credits |
+| Persona demos (Hope, Jordan, Casey, Sam, Kai) | `python -m src.eval.demos --save` | credits |
+| Blind "is Ultra worth it?" comparison | `python -m src.eval compare --save` | credits |
 
-Where a run counts as **local** or **Token Factory** is decided by the tier providers in `.env`:
-any tier on Nebius makes it a Token Factory run.
+A run counts as a **Meta** run when its tiers use the Meta Model API; a run with no model calls is **simulated**.
+Contributor mode costs far less per token than Standard, and is the mode to use for the synthetic test batches.
 
 ## 4. Reading a report
 

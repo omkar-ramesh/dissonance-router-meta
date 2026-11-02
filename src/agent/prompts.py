@@ -98,7 +98,7 @@ def build_messages(analysis: dict, history: list[dict], user_message: str) -> li
         if turn.get("agent_response"):
             messages.append({"role": "user", "content": turn["user_message"]})
             messages.append({"role": "assistant", "content": turn["agent_response"]})
-    # Some models (e.g. deepseek-r1) under-weight the system prompt, so the
+    # Some models under-weight the system prompt, so the
     # reconciliation format is repeated where every model reads it: the user turn.
     hints = _hints(analysis) if analysis["model_chosen"] == "ultra" else []
     if hints:

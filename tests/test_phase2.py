@@ -28,7 +28,7 @@ class FakeLLM:
     def __init__(self):
         self.calls = []
 
-    def chat(self, tier, messages, temperature=0.7):
+    def chat(self, tier, messages, temperature=None):
         self.calls.append((tier, messages))
         return LLMResult(text=f"answer from {tier}", tier=tier, model=MODELS[tier], latency_ms=5)
 
@@ -207,7 +207,7 @@ class TestLLMClient:
         result = mock_client(lambda r: completion("Answer", reasoning_content="step 1")).chat("ultra", [])
         assert (result.text, result.reasoning) == ("Answer", "step 1")
 
-    def test_reads_ollama_reasoning_field(self):
+    def test_reads_a_reasoning_field(self):
         result = mock_client(lambda r: completion("Answer", reasoning="thinking")).chat("ultra", [])
         assert result.reasoning == "thinking"
 
@@ -253,33 +253,17 @@ class TestLLMClient:
         with pytest.raises(LLMError, match="stream error"):
             mock_client(lambda r: sse({"error": {"message": "out of memory"}})).chat("nano", [])
 
-    def test_context_from_ollama_ps(self):
-        def handler(request):
-            if request.url.path == "/api/ps":
-                return httpx.Response(200, json={"models": [{
-                    "name": "small", "context_length": 32768,
-                    "details": {"family": "nemotron_h", "parameter_size": "4.0B", "quantization_level": "Q4_K_M"},
-                }]})
-            return completion("hi", usage={"prompt_tokens": 3000, "completion_tokens": 288, "total_tokens": 3288})
-
-        client = LLMClient("http://test/v1", MODELS, transport=httpx.MockTransport(handler),
-                           ps_urls={"nano": "http://test/api/ps"})
+    def test_context_comes_from_the_config(self):
+        client = LLMClient("http://test/v1", MODELS, context_windows={"nano": 1_048_576},
+                           transport=httpx.MockTransport(lambda r: completion(
+                               "hi", usage={"prompt_tokens": 3000, "completion_tokens": 288, "total_tokens": 3288})))
         result = client.chat("nano", [])
-        assert result.model_name == "nemotron_h 4.0B Q4_K_M"
-        assert result.context_window == 32768
-        assert result.context_pct == 10.0
+        assert (result.model_name, result.context_window) == ("small", 1_048_576)
+        assert result.context_pct == 0.3
 
-    def test_context_falls_back_to_config_and_survives_ps_failure(self):
-        def handler(request):
-            if request.url.path == "/api/ps":
-                return httpx.Response(500)
-            return completion("hi")
-
-        client = LLMClient("http://test/v1", MODELS, transport=httpx.MockTransport(handler),
-                           ps_urls={"ultra": "http://test/api/ps"}, context_windows={"ultra": 1000})
-        result = client.chat("ultra", [])
-        assert (result.model_name, result.context_window) == ("large", 1000)
-        assert result.context_pct == 1.3
+    def test_no_context_window_is_fine(self):
+        result = mock_client(lambda r: completion("hi")).chat("ultra", [])
+        assert result.context_window is None and result.context_pct is None
 
     def test_http_error_raises_llm_error(self):
         with pytest.raises(LLMError, match="500"):
@@ -292,33 +276,53 @@ class TestLLMClient:
         with pytest.raises(LLMError, match="Could not reach"):
             mock_client(handler).chat("nano", [])
 
-    def test_per_tier_backends(self):
-        """Ultra goes to one host with a key; the other tiers stay on the default host."""
+    def test_retries_without_stream_options_when_refused(self):
         seen = []
 
         def handler(request):
-            seen.append((request.url.host, request.headers.get("authorization")))
+            body = json.loads(request.content)
+            seen.append("stream_options" in body)
+            if "stream_options" in body:
+                return httpx.Response(400, text='{"error":{"message":"unknown parameter: stream_options"}}')
             return completion("ok")
 
-        client = LLMClient(
-            "http://local/v1", MODELS, transport=httpx.MockTransport(handler),
-            overrides={"ultra": {"base_url": "http://cloud/v1", "api_key": "k"}},
-        )
-        client.chat("nano", [])
-        client.chat("ultra", [])
-        assert seen == [("local", None), ("cloud", "Bearer k")]
+        result = mock_client(handler).chat("nano", [])
+        assert result.text == "ok" and seen == [True, False]
 
-    def test_from_config_mixed_providers(self, monkeypatch):
+    def test_other_400s_are_not_retried(self):
+        calls = []
+
+        def handler(request):
+            calls.append(1)
+            return httpx.Response(400, text='{"error":{"message":"reasoning_effort none is not supported"}}')
+
+        with pytest.raises(LLMError, match="400"):
+            mock_client(handler).chat("nano", [])
+        assert len(calls) == 1
+
+    def test_reads_cached_and_reasoning_tokens_and_prices_them(self):
+        usage = {"prompt_tokens": 2000, "completion_tokens": 500, "total_tokens": 2500,
+                 "prompt_tokens_details": {"cached_tokens": 1500},
+                 "completion_tokens_details": {"reasoning_tokens": 300}}
+        prices = {"nano": {"in": 1.0, "out": 4.0, "cached": 0.1}}
+        client = LLMClient("http://test/v1", MODELS, prices=prices, transport=httpx.MockTransport(lambda r: completion("hi", usage=usage)))
+        result = client.chat("nano", [])
+        assert result.cached_tokens == 1500 and result.reasoning_tokens == 300
+        assert result.stats()["cached_tokens"] == 1500
+        # 500 uncached in at $1, 1500 cached at $0.10, 500 out at $4, per 1M tokens
+        assert result.est_cost_usd == pytest.approx((500 * 1.0 + 1500 * 0.1 + 500 * 4.0) / 1_000_000)
+
+    def test_from_config_needs_the_meta_key(self, monkeypatch):
         from src import config
-        monkeypatch.setattr(config, "TIER_PROVIDERS", {"nano": "ollama", "super": "ollama", "ultra": "nebius"})
-        monkeypatch.setattr(config, "NEBIUS_API_KEY", "")
-        with pytest.raises(LLMError, match="ultra"):
+        monkeypatch.setattr(config, "META_API_KEY", "")
+        with pytest.raises(LLMError, match="MODEL_API_KEY"):
             LLMClient.from_config()
-        monkeypatch.setattr(config, "NEBIUS_API_KEY", "k")
-        monkeypatch.setattr(config, "NEBIUS_BASE_URL", "https://cloud/v1")
+        monkeypatch.setattr(config, "META_API_KEY", "k")
+        monkeypatch.setattr(config, "META_BASE_URL", "https://api.example.test/v1")
         client = LLMClient.from_config()
-        assert str(client._clients["ultra"].base_url).startswith("https://cloud")
-        assert "11434" in str(client._clients["nano"].base_url)
+        assert str(client._http.base_url).startswith("https://api.example.test")
+        assert client._http.headers["authorization"] == "Bearer k"
+        assert client.models == config.MODEL_TIERS
 
     def test_unknown_tier(self):
         with pytest.raises(ValueError):

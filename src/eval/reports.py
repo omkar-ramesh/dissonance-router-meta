@@ -1,8 +1,8 @@
 """Saved reports: one gzipped JSON file per run in docs/reports/, so the app and the repo show the same evidence.
 
-`python -m src.eval.reports` (re)builds the files for the reports already in docs/.
-Where a run happened is read from the tier providers: any tier on Nebius makes it a Token Factory run;
-everything else (Ollama, or the simulator) is local, i.e. what we did while building.
+`python -m src.eval.reports --compress` rewrites every report file with the current card fields.
+Where a run happened is read from the tier providers: any tier on the Meta Model API makes it a Meta run
+("api"); a run with no model calls is simulated.
 """
 import gzip
 import os
@@ -20,7 +20,7 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9_+-]{0,80}$")
 
 
 def where(providers: dict | None) -> str:
-    return "api" if any(p == "nebius" for p in (providers or {}).values()) else "local"
+    return "api" if any(p == "meta" for p in (providers or {}).values()) else "local"
 
 
 def _ms(v) -> str:
@@ -48,7 +48,7 @@ def _scenario_card(report: dict, providers) -> dict:
     sim = report["simulated"]
     return {
         "kind": "scenarios",
-        "title": (f"{sc[0]['id'].replace('_', ' ')} · " if len(sc) == 1 else f"{len(sc)} scenarios · ") + f"{'Nemotron Nano' if reader == 'nano' else 'keyword'} reader",
+        "title": (f"{sc[0]['id'].replace('_', ' ')} · " if len(sc) == 1 else f"{len(sc)} scenarios · ") + f"{'Muse Spark' if reader == 'nano' else 'keyword'} reader",
         "description": ("Routing and grading are real; model answers and tokens are simulated." if sim else
                         "Real model answers on every scenario, graded by the same checks as the simulated run."),
         "headline": f"{ok}/{len(sc)} as expected",
@@ -104,8 +104,7 @@ def build(report: dict, name: str, providers: dict | None = None, created: str |
     if run_n:
         card["title"] += f" · run {run_n}"
     card["run_on"] = ("Simulator · no model calls" if card["simulated"] else
-                      f"Nebius Token Factory · {config.NEBIUS_BASE_URL or 'api.tokenfactory.nebius.com'}" if src == "api"
-                      else f"Local · {config.HARDWARE} · Ollama")
+                      f"Meta Model API · {config.META_BASE_URL}" if src == "api" else "Not run on a model API")
     return {"id": name, "created": created or datetime.now(timezone.utc).isoformat(timespec="seconds"),
             **card, "report": report}
 
@@ -146,26 +145,12 @@ def get(report_id: str, out: Path = REPORTS_DIR) -> dict | None:
     return None
 
 
-def import_existing() -> list[Path]:
-    """Build files for the reports kept in docs/. They were made while building, on local models."""
-    docs = REPORTS_DIR.parent
-    local = {"nano": "ollama", "super": "ollama", "ultra": "ollama"}
-    made = []
-    for src, name in (("eval-report.json", "scenarios-keywords-simulated"), ("eval-report-nano.json", "scenarios-nano-reader-local"),
-                      ("compare-report.json", "compare-nano-vs-ultra-local")):
-        file = docs / src
-        if file.is_file():
-            stamp = datetime.fromtimestamp(file.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")
-            made.append(save(json.loads(file.read_text(encoding="utf-8")), name, local, created=stamp))
-    return made
-
-
 def compress_all(out: Path = REPORTS_DIR) -> list[Path]:
     """Rewrite every report as .json.gz, re-deriving the card so new fields appear."""
     made = []
     for path in sorted([*out.glob("*.json"), *out.glob("*.json.gz")]):
         data = _read(path)
-        prov = {"nano": "nebius"} if data.get("source") == "api" else {"nano": "ollama"}
+        prov = {"nano": "meta"} if data.get("source") == "api" else {"nano": "none"}
         made.append(save(data["report"], data["id"], prov, out, data.get("created")))
         if path.suffix == ".json":
             path.unlink()
@@ -177,6 +162,5 @@ if __name__ == "__main__":
         for path in compress_all():
             print("compressed", path)
         sys.exit(0)
-    for path in import_existing():
-        print("wrote", path)
-    sys.exit(0)
+    print("usage: python -m src.eval.reports --compress")
+    sys.exit(1)

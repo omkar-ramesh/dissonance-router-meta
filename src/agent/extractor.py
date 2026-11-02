@@ -1,10 +1,11 @@
-"""Nemotron Nano reads each message for style requests; keywords are the fallback.
+"""The Nano tier (a short Muse Spark call) reads each message for style requests; keywords are the fallback.
 
 The keyword reader only knows explicit English phrasings. It misses "I'm still lost" and
 other languages, and it is fooled by negation ("don't make it shorter") and by quoted
 words ("my boss says 'keep it short'"). Nano reads the message the way a person would.
 
-Cost: one short Nano call per new message, with reasoning off and a small output cap.
+Cost: one short Nano call per new message, at minimal reasoning and a small output cap. Reasoning tokens count
+toward the cap, so it leaves room for them.
 Results are cached by message text, so re-weighing recent history costs nothing.
 If the call fails or returns something unusable, the keyword reader answers instead.
 """
@@ -58,9 +59,9 @@ _QUOTED = re.compile(r'"[^"]*"|“[^”]*”|‘[^’]*’|(?<!\w)\'[^\']+\'(?!\
 
 
 class NanoExtractor(SignalExtractor):
-    """A SignalExtractor whose `extract` asks Nemotron Nano, falling back to keywords."""
+    """A SignalExtractor whose `extract` asks the Nano tier, falling back to keywords."""
 
-    def __init__(self, llm, db_path: Optional[str] = None, tier: str = "nano", max_tokens: int = 100):
+    def __init__(self, llm, db_path: Optional[str] = None, tier: str = "nano", max_tokens: int = 400):
         self.llm, self.db_path, self.tier, self.max_tokens = llm, db_path, tier, max_tokens
         self._memo: dict[str, dict] = {}
         self.calls = []        # LLMResults of fresh (uncached) readings, for honest cost accounting
@@ -119,7 +120,7 @@ class NanoExtractor(SignalExtractor):
 def parse(text: str, message: str) -> dict[str, str]:
     """The model's first signal, kept only when backed by evidence.
 
-    Only the first key is read: on local Nemotron Nano 4B the first key was almost always
+    Only the first key is read: in early tests on a small model the first key was almost always
     right, while extra keys were mostly invented from topic words. A message asking for two
     things therefore loses the second; that is the price of not inventing preferences.
     The key must be a known dimension with a pole value AND a quote that really is in the

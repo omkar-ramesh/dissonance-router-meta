@@ -16,7 +16,7 @@ Sam set "concise", then asks for the opposite using a negation.
 Read as a request for **detail**, which contradicts "concise".
 
 ## Why it is a known failure
-A keyword reader sees "short" and can read the request backwards. With the Nemotron Nano reader enabled
+A keyword reader sees "short" and can read the request backwards. With the Nano-tier reader enabled
 it is usually read correctly, and the run shows **FIXED**. With keywords only it shows **KNOWN GAP**, reason
 code `MISREAD_NEGATION`.
 

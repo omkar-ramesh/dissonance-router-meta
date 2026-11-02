@@ -11,7 +11,15 @@ from src.api.dependencies import get_agent
 from src.eval.claims import verify_explanations
 from src.main import app
 
-P = config.PRICES
+# The planner is tested at fixed prices, so a change of the live Meta prices cannot change what it proves.
+P = {"nano": {"in": 0.06, "out": 0.24, "cached": 0.006}, "super": {"in": 0.30, "out": 0.90, "cached": 0.03},
+     "ultra": {"in": 1.00, "out": 3.00, "cached": 0.10}}
+
+
+@pytest.fixture(autouse=True)
+def fixed_prices(monkeypatch):
+    for tier, price in P.items():
+        monkeypatch.setitem(config.PRICES, tier, price)
 
 
 class Spender:
@@ -20,7 +28,7 @@ class Spender:
     def __init__(self):
         self.calls = []
 
-    def chat(self, tier, messages, temperature=0.7, **kw):
+    def chat(self, tier, messages, temperature=None, **kw):
         self.calls.append({"tier": tier, **kw})
         out = kw.get("max_tokens") or 300
         return LLMResult(text="answer " * 10, tier=tier, model=tier, latency_ms=1, input_tokens=200, output_tokens=out)

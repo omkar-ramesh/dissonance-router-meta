@@ -8,7 +8,7 @@ Six rules the agent follows. Each one is enforced in code and checked by a test 
 Neither wins automatically; the gap between them is the signal. Strong, repeated
 behavior shapes the answer, but only the user can change what they said they prefer.
 
-Behavior means both how someone asks (their messages, read by Nemotron Nano) and what they
+Behavior means both how someone asks (their messages, read by the Nano tier) and what they
 do with answers: 👍, 👎 with a reason, copy, try again. On the same answer, what they did
 outweighs what they wrote.
 

@@ -68,5 +68,5 @@ class HopeReview(BaseModel):
 
 
 class ModeRequest(BaseModel):
-    mode: Literal["offline", "online"]
+    mode: Literal["standard", "contributor"]
     confirm: bool = False

@@ -292,7 +292,7 @@ function renderRun() {
       ["Speed (wall)", t.calls ? t.tokens_per_sec + " tok/s" : "—"], ["Avg TTFT", fmtMs(t.avg_ttft_ms)],
       ["Max context", t.max_context_pct == null ? "—" : t.max_context_pct + " %"],
     ]],
-    ["Est. cost @ Token Factory prices", [
+    ["Est. cost @ Meta prices", [
       ["This run", fmtUsd(t.est_cost_usd)], ["If all Ultra", fmtUsd(t.est_cost_if_ultra_usd)],
       ["Routing saves", t.savings_pct == null ? "—" : t.savings_pct + " %"],
     ]],
@@ -303,7 +303,7 @@ function renderRun() {
     `</div></div>`).join("");
   const prices = Object.entries(run.prices || {}).map(([k, p]) => `${esc(k)} $${p.in}/$${p.out}`).join(" · ");
   $("models").innerHTML = Object.entries(run.models || {}).map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join("")
-    + (prices ? `<span title="Estimate: tokens counted on the local models, priced at Token Factory list prices (unverified; set PRICE_* in .env)">$/1M in/out: ${prices}</span>` : "");
+    + (prices ? `<span title="Estimate: tokens counted from the API usage field, priced at Meta list prices (set PRICE_* in .env to override)">$/1M in/out: ${prices}</span>` : "");
 
   const live = run.steps.filter(s => s.group === "live"), unit = run.steps.filter(s => s.group === "pytest");
   renderStory(live);

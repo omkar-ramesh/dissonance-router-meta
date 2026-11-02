@@ -10,7 +10,7 @@ from src.agent.llm_client import LLMClient
 
 @lru_cache
 def get_agent() -> Agent:
-    """One agent per process. A config error (e.g. missing Token Factory key) is raised
+    """One agent per process. A config error (e.g. a missing MODEL_API_KEY) is raised
     on every request until fixed, rather than cached."""
     llm = LLMClient.from_config()
     extractor = NanoExtractor(llm, config.DB_PATH) if config.SIGNAL_EXTRACTOR == "nano" else None

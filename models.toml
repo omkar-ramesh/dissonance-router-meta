@@ -1,58 +1,57 @@
-# Which model serves each tier, offline (local) and online (Nebius Token Factory).
-# Edit this file, restart the server, and the Models tab shows the change. The Offline / Online switch
-# in the app picks one of the two profiles. A value in .env (MODEL_NANO, PRICE_NANO_IN, ...) still wins.
+# Which Meta model serves each tier, in two profiles of the Meta Model API.
+# Edit this file, restart the server, and the Models page shows the change. The Standard / Contributor
+# switch in the app picks one of the two profiles. A value in .env (MODEL_NANO, PRICE_NANO_IN, ...) still wins.
 #
-#   provider   "ollama" (runs on this machine) or "nebius" (Token Factory, spends credits)
-#   model      the exact id the provider knows. Offline: `ollama list`. Online: the Token Factory catalog.
-#   reasoning  "on" lets the model think before answering (more tokens), "off" answers directly.
+#   model      the exact Meta Model API id (https://dev.meta.ai/docs/models)
+#   effort     reasoning_effort: minimal, low, medium, high, xhigh or max. Muse Spark always reasons, so
+#              "none" is rejected by the API; the router spends thinking only where the user is uncertain.
+#   in, out    USD per 1M input / output tokens. cached: per 1M cached input tokens.
+#              Reasoning tokens are billed as output.
+#
+# Standard mode: your content is not used to train Meta models.
+# Contributor mode: your content may be used to train future Meta models, for a lower price.
+# Muse Wonder has no Contributor mode, and Muse Spark 1.3 Contributor has no "max" effort.
 
-default_mode = "online"
+default_mode = "standard"
 
-[offline.nano]
-provider = "ollama"
-model = "nemotron-3-nano:4b"
-reasoning = "off"
+[standard.nano]
+model = "muse-spark-1.3"
+effort = "minimal"
+in = 1.25
+out = 4.25
+cached = 0.15
 
-[offline.super]
-provider = "ollama"
-model = "nemotron-3-nano:30b"
-reasoning = "off"
+[standard.super]
+model = "muse-spark-1.3"
+effort = "medium"
+in = 1.25
+out = 4.25
+cached = 0.15
 
-[offline.ultra]
-provider = "ollama"
-model = "deepseek-r1:32b"        # local stand-in for Nemotron-3-Ultra
-reasoning = "on"
+[standard.ultra]
+model = "muse-wonder-1.0"
+effort = "high"
+in = 4.00
+out = 20.00
+cached = 0.20
 
-# Online profile. The ids below are the catalog names and are NOT confirmed API ids yet:
-# the switch stays locked until `confirmed = true`, so nothing can spend credits by accident.
-[online]
-confirmed = true
+[contributor.nano]
+model = "muse-spark-1.3-contributor"
+effort = "minimal"
+in = 0.10
+out = 0.20
+cached = 0.002
 
-[online.nano]
-provider = "nebius"
-model = "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"
-reasoning = "off"
+[contributor.super]
+model = "muse-spark-1.3-contributor"
+effort = "medium"
+in = 0.10
+out = 0.20
+cached = 0.002
 
-[online.super]
-provider = "nebius"
-model = "nvidia/nemotron-3-super-120b-a12b"
-reasoning = "off"
-
-[online.ultra]
-provider = "nebius"
-model = "nvidia/Nemotron-3-Ultra-550b-a55b"
-reasoning = "on"
-
-# USD per 1M tokens (Token Factory list prices). Planning figures until checked against the
-# Nebius price page and billing. Offline runs are priced the same way for the simulated wallet.
-[prices.nano]
-in = 0.06
-out = 0.24
-
-[prices.super]
-in = 0.30
-out = 0.90
-
-[prices.ultra]
-in = 1.00
-out = 3.00
+[contributor.ultra]
+model = "muse-spark-1.3-contributor"
+effort = "xhigh"
+in = 0.10
+out = 0.20
+cached = 0.002

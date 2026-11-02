@@ -2,12 +2,14 @@
 
 A personal AI agent that notices when **what you say you want** doesn't match **what you actually do**, and spends more model power when that happens. Every routing decision is logged with the reason.
 
-Built for the Nebius x NVIDIA Global AI Hackathon (track: Best Apps and Agents). Runs on NVIDIA Nemotron models.
+Built for the Meta Global AI Developer Hackathon (Indie Developer track). Runs on Meta's Muse models through the Meta Model API.
+
+This repository is a separate version of a project that started as an earlier hackathon entry. It was rebuilt around Meta's models: the model layer, prices, reasoning control, reports and UI text are Meta-specific, and no earlier results are included.
 
 ## Contents
 
-- **Understand it:** [The idea](#the-idea) · [How it works](#how-it-works) · [Design guidelines](#design-guidelines) · [Nemotron and Nebius Token Factory](#nemotron-and-nebius-token-factory)
-- **Run it:** [Quick start](#quick-start) · [The app](#the-app) · [Settings and the tutorial](#settings-and-the-tutorial) · [Models, offline and online](#models-offline-and-online) · [Public demo mode](#public-demo-mode)
+- **Understand it:** [The idea](#the-idea) · [How it works](#how-it-works) · [Design guidelines](#design-guidelines) · [Meta Model API](#meta-model-api)
+- **Run it:** [Quick start](#quick-start) · [The app](#the-app) · [Settings and the tutorial](#settings-and-the-tutorial) · [Models and modes](#models-and-modes) · [Public demo mode](#public-demo-mode)
 - **Features:** [Personas, Hope and the team lessons](#personas-hope-and-the-team-lessons) · [Note bot](#note-bot) · [Memory](#memory-past-conversations) · [Budget limiter](#budget-limiter)
 - **Evidence:** [Evaluation](#evaluation) · [Reports](#reports) · [Known limitations](#known-limitations)
 - **Reference:** [Efficiency choices](#efficiency-choices) · [HTTP API](#http-api) · [Dev dashboard](#dev-dashboard) · [Project layout](#project-layout)
@@ -26,7 +28,7 @@ When the two disagree, that disagreement is the signal. The router doesn't pick 
 ## How it works
 
 1. **Learn from words and from behavior.**
-   - *Words:* **Nemotron Nano reads each message** for style requests, in any language ("I'm still lost", "short version please", "no need for sources"). It must quote the user's exact words as evidence, or nothing is learned; words inside quotation marks are someone else's and don't count. One short call per message, thinking off, cached; if Nano is unavailable a keyword reader takes over.
+   - *Words:* **The Nano tier (a short Muse Spark call) reads each message** for style requests, in any language ("I'm still lost", "short version please", "no need for sources"). It must quote the user's exact words as evidence, or nothing is learned; words inside quotation marks are someone else's and don't count. One short call per message, at minimal reasoning, cached; if Nano is unavailable a keyword reader takes over.
    - *Behavior:* what you **do** with an answer: 👍, 👎 with a reason ("too long"), copy, or "try again".
    - A value only becomes a habit when it repeats recently (recent turns weigh more; old habits fade), so one offhand remark changes nothing.
 2. **Score.** Each dimension gets a conflict score from 0 to 1:
@@ -60,46 +62,33 @@ Six rules, each enforced in code and checked by its own test ([details](docs/GUI
 5. **Explain every choice, never change a preference silently.** Every answer says why; adopting a habit needs your yes and can be undone.
 6. **Be honest and keep it private.** Say when something failed or isn't known; never invent sources.
 
-## Nemotron and Nebius Token Factory
+## Meta Model API
 
-The three tiers run NVIDIA Nemotron 3 models served by Nebius Token Factory (an OpenAI-compatible API):
+Every tier is a Muse model served by the [Meta Model API](https://dev.meta.ai/docs/overview), an OpenAI-compatible Chat Completions endpoint (`https://api.meta.ai/v1`). The models share a 1M-token context, so the router's real dial is **reasoning effort**: how much thinking it buys for a request.
 
-| Tier | Token Factory model | Used when |
-|---|---|---|
-| Nano | `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B` | Words and behaviour agree. Also reads every message for style requests. |
-| Super | `nvidia/nemotron-3-super-120b-a12b` | A preference is emerging. |
-| Ultra | `nvidia/Nemotron-3-Ultra-550b-a55b` | A clear contradiction (reasoning on). |
+| Tier | Model (Standard mode) | Reasoning effort | Used when |
+|---|---|---|---|
+| Nano | `muse-spark-1.3` | minimal | Words and behaviour agree. Also reads every message for style requests. |
+| Super | `muse-spark-1.3` | medium | A preference is emerging. |
+| Ultra | `muse-wonder-1.0` (preview) | high | A clear contradiction. |
 
-**Where Token Factory helped**
+- **Reasoning is always on.** Muse Spark rejects `reasoning_effort: none`, so "thinking off" means `minimal`. Reasoning tokens are billed as output, and they count toward `max_completion_tokens`.
+- **Standard and Contributor modes.** Standard does not use your content to train Meta models. Contributor is cheaper (`muse-spark-1.3-contributor`, $0.10 in / $0.20 out per 1M tokens) but lets Meta use your content for training, so the app asks before switching to it. Muse Wonder has no Contributor mode, so the Contributor Ultra tier is Muse Spark at `xhigh`.
+- **Prices** (per 1M tokens, from the Meta docs): Muse Spark $1.25 in / $4.25 out, cached input $0.15; Muse Wonder $4.00 / $20.00, cached $0.20. They live in [`models.toml`](models.toml).
+- **Prompt caching.** The client sends a stable `prompt_cache_key` per tier and prices cached input tokens at the cached rate when the API reports them.
+- **Parameters.** Only parameters the API accepts are sent (`max_completion_tokens`, `reasoning_effort`, `stream`). `temperature` is sent only when a caller asks for it.
 
-- **The 550B model.** Nemotron 3 Ultra cannot run on one local GPU, so local runs use a stand-in (`deepseek-r1:32b`). Token Factory is the only place the real Ultra tier runs.
-- **Volume.** I ran 512 reports, one per test, on the real Nemotron models, with several runs in parallel. Each report is saved in `docs/reports/`.
-- **One switch.** The same code runs against local Ollama or Token Factory. `models.toml` lists the model ids for each, and the Models page switches between them.
-- **Measured cost.** Token counts come from the API's usage field, so the budget limiter and the cost figures use real numbers.
-
-Other Nebius services: Token Factory only. Prices in `models.toml` are planning figures and have not been checked against Nebius billing.
-
-Local development used Ollama models, selected per tier in `models.toml`:
-
-| Tier | Local development |
-|---|---|
-| Nano | `nemotron-3-nano:4b` |
-| Super | `nemotron-3-nano:30b` |
-| Ultra | `deepseek-r1:32b` (stand-in) |
+Status: the client is unit-tested against the documented API with mocked responses. Live measurements are added to [Reports](#reports) after the test batch runs.
 
 ## Quick start
 
-Requires Python 3.10+ and [Ollama](https://ollama.com).
+Requires Python 3.11+ and a Meta Model API key from [dev.meta.ai](https://dev.meta.ai).
 
 ```bash
 python -m venv venv
 venv\Scripts\activate            # Windows (use: source venv/bin/activate on macOS/Linux)
 pip install -r requirements.txt
-copy .env.example .env           # cp on macOS/Linux
-
-ollama pull nemotron-3-nano:4b
-ollama pull nemotron-3-nano:30b
-ollama pull deepseek-r1:32b
+copy .env.example .env           # cp on macOS/Linux; then set MODEL_API_KEY in .env
 ```
 
 Step-by-step instructions for every test run and the report format: [docs/RUNNING.md](docs/RUNNING.md).
@@ -158,19 +147,20 @@ Five scripted demo users, each replayable with one click (Proof, or Settings →
 
 API: `POST /hope/review`, `POST /hope/apply`, `GET /lessons`.
 
-## Models, offline and online
+## Models and modes
 
-[`models.toml`](models.toml) lists the model for each tier in two profiles, with prices. Edit it and restart.
+[`models.toml`](models.toml) lists the model, reasoning effort and prices for each tier in two profiles. Edit it and restart.
 
-| | Offline | Online |
+| | Standard | Contributor |
 |---|---|---|
-| Runs on | Local Ollama | Nebius Token Factory |
-| Cost | Simulated wallet only | Spends credits |
-| Availability | Always | Locked until the key is set and `confirmed = true`; asks for confirmation; never in the public demo |
+| Models | `muse-spark-1.3`, `muse-wonder-1.0` | `muse-spark-1.3-contributor` |
+| Your content | Not used for training | May be used to train Meta models |
+| Price | Muse Spark $1.25 / $4.25; Wonder $4 / $20 | $0.10 / $0.20 |
+| Availability | Needs `MODEL_API_KEY` | Needs the key and a confirmation; never in the public demo |
 
-- The **Offline / Online** switch is in Settings → Models.
-- Values in `.env` still override the file.
-- Token counts are measured; prices are list prices until checked against Nebius billing. The Budget page says which numbers are measured and which are estimated.
+- The **Standard / Contributor** switch is in Settings → Models.
+- Values in `.env` still override the file (`MODEL_NANO`, `EFFORT_NANO`, `PRICE_NANO_IN`, ...).
+- Token counts come from the API's usage field. The Budget page says which numbers are measured and which are estimated.
 
 ## Settings and the tutorial
 
@@ -198,8 +188,7 @@ Every evaluation run is saved as one file in [`docs/reports/`](docs/reports/) an
 
 **Filters**
 
-- **Local**: runs made while building, on local stand-in models or the simulator.
-- **Token Factory**: runs on the real Nemotron models.
+- **Meta**: runs on the real Muse models.
 - **Archived**: older runs, moved to [`docs/reports/archive/`](docs/reports/archive/) and kept as evidence.
 
 Where a run happened is read from the tier providers, not typed in.
@@ -212,7 +201,7 @@ python -m src.eval compare --save      # blind Nano-vs-Ultra comparison
 python -m src.eval.demos --save        # one report per persona
 ```
 
-The local test runs are also published on their own: [the-dissonance-router-local-runs](https://github.com/omkar-ramesh/the-dissonance-router-local-runs). API: `GET /reports`, `GET /reports/{id}`.
+API: `GET /reports`, `GET /reports/{id}`.
 
 ## Note bot
 
@@ -243,10 +232,10 @@ API: `POST /conversations/new`, `GET /memory/{user_id}`, `GET /memory/{user_id}/
 
 ## Budget limiter
 
-Settings → Budget sets a $ limit (a simulated wallet: real token counts × Token Factory list prices, no real money). The router plans every answer within it:
+Settings → Budget sets a $ limit (a simulated wallet: real token counts × Meta list prices, no real money). The router plans every answer within it:
 
 - If the tier it wants would take more than 20% of what's left, it steps down (Ultra → Super → Nano) and says so: *"the router chose Ultra, but ~$0.006 is more than 20% of the $0.0097 left, so Super answered"*.
-- Under 25% left, thinking is off and answers are shorter.
+- Under 25% left, reasoning drops to minimal and answers are shorter.
 - Every answer's length is capped so it can't cost more than what's left. When nothing useful fits, it says the budget is used up (`402`).
 
 Each answer shows the cost **predicted** before the call next to the cost **measured** after. Typical answer lengths are learned from real answers, so the predictions improve with use.
@@ -255,9 +244,9 @@ API: `GET /budget/{user_id}`, `POST /budget {user_id, limit_usd, reset_spent}`.
 
 ## Efficiency choices
 
-- **Thinking only where it pays.** Nano and Super answer with reasoning off (`reasoning_effort: none` on Ollama); Ultra keeps it. On local Nemotron Nano that cut "hi" from 33 to 13 output tokens.
-- **The cheapest model does the reading.** The signal reader is Nano with thinking off, a 100-token cap and a cache, so re-weighing history costs nothing.
-- **A 2-second bug found by measuring.** On Windows every new connection to `localhost` tried IPv6 first and cost ~2.2 s before falling back; `127.0.0.1` costs 0.16 s. Model calls now use `127.0.0.1` and cache model metadata, which removed seconds of overhead from every answer.
+- **Thinking only where it pays.** Nano answers at `minimal` reasoning, Super at `medium`, Ultra at `high`. Muse Spark always reasons, so the saving is in how much, not whether.
+- **The cheapest tier does the reading.** The signal reader is Nano at minimal reasoning, a small output cap that leaves room for the reasoning tokens, and a cache, so re-weighing history costs nothing.
+- **Cached input is priced as cached.** The system prompt repeats on every call; when the API reports cached tokens, the cost uses the cached rate.
 
 ## Public demo mode
 
@@ -296,7 +285,7 @@ A small local dashboard runs the test suite and live-model scenarios and shows p
 python -m src.devdash      # opens http://127.0.0.1:8765
 ```
 
-The cost figures use Token Factory list prices taken from third-party listings (not confirmed on Nebius's own page) and token counts from the local models, so treat them as rough estimates. Prices can be overridden with `PRICE_*` variables in `.env`.
+The cost figures use the Meta list prices in `models.toml` and the token counts the API reports. Prices can be overridden with `PRICE_*` variables in `.env`.
 
 ## Project layout
 
@@ -310,16 +299,16 @@ src/db/           SQLite connection and schema
 src/eval/         scenarios, grading with reason codes, false-claim checks, saved reports
 src/devdash/      local test dashboard (stdlib server + one HTML page)
 src/cli.py        terminal interface
-models.toml       offline / online models per tier, with prices
+models.toml       Meta models, reasoning effort and prices per tier, in two modes
 docs/reports/     saved runs (.json.gz); older ones in docs/reports/archive/
 tests/            unit tests (no network)
 ```
 
 ## Known limitations
 
-- The Nano reader keeps only the first request it finds in a message (extra keys were mostly invented on the 4B model), so "no bullets and be casual" teaches one of the two. It misses some phrasings rather than guessing.
+- The Nano reader keeps only the first request it finds in a message (extra keys were mostly invented in early tests), so "no bullets and be casual" teaches one of the two. It misses some phrasings rather than guessing.
 - Behavior signals cover thumbs, reasons, copy and retry; not yet edits to an answer or reading time.
-- Local stand-in models behave differently from Nemotron; prompts will be re-tuned on Token Factory.
+- The prompts were first tuned on other models. Results on the Meta models are added to Reports after the live test batch, and the prompts are re-tuned where they miss.
 
 ## License
 

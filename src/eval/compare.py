@@ -9,7 +9,7 @@ is judged twice with the order swapped; a verdict that flips with the order coun
     python -m src.eval compare                  # contestants nano vs ultra, judged by super
     python -m src.eval compare --judge nano     # any tier that isn't a contestant
 
-Limits: one judge model, six cases, and locally the tiers are stand-ins for Nemotron Super
+Limits: one judge model, six cases
 and Ultra. It answers "on these cases, with these models", not "in general".
 """
 import argparse
@@ -155,7 +155,7 @@ def to_markdown(rep):
              f"**{rep['verdict']}**", "",
              f"| | {a} | {b} |", "|---|---|---|",
              f"| Cases won | {rep['wins'][a]} | {rep['wins'][b]} |",
-             f"| Avg cost per answer (Token Factory prices) | ${rep['avg'][a]['cost_usd']:.5f} | ${rep['avg'][b]['cost_usd']:.5f} |",
+             f"| Avg cost per answer (Meta prices) | ${rep['avg'][a]['cost_usd']:.5f} | ${rep['avg'][b]['cost_usd']:.5f} |",
              f"| Avg latency | {rep['avg'][a]['latency_ms'] / 1000:.1f} s | {rep['avg'][b]['latency_ms'] / 1000:.1f} s |",
              f"| Opens with TL;DR (length cases) | {rep['tldr_on_length_cases'][a]} | {rep['tldr_on_length_cases'][b]} |",
              f"| Unbacked links | {rep['unbacked_sources'][a]} | {rep['unbacked_sources'][b]} |", "",
@@ -164,7 +164,7 @@ def to_markdown(rep):
     for r in rep["results"]:
         reasons = " / ".join(v["why"].replace("|", "/")[:140] for v in r["verdicts"])
         lines.append(f"| {r['message']} | {r['dimension']}: says {r['stated']}, does {r['observed']} | {r['outcome']} | {reasons} |")
-    lines += ["", "Limits: one judge model, six cases; locally the tiers are stand-ins, not Nemotron Super/Ultra."]
+    lines += ["", "Limits: one judge model, six cases."]
     return "\n".join(lines) + "\n"
 
 

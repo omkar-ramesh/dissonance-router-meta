@@ -30,7 +30,7 @@ class Tally:
         self.simulated = getattr(inner, "simulated", False)
         self.calls = []
 
-    def chat(self, tier, messages, temperature=0.7):
+    def chat(self, tier, messages, temperature=None):
         result = self.inner.chat(tier, messages, temperature)
         self.calls.append(result)
         return result
@@ -160,7 +160,7 @@ def self_test(llm=None):
 def run_all(llm, compare=True, only=None, reader="keywords", reader_llm=None):
     """Grade every scenario on `llm`, then price the three strategies on the success scenarios.
 
-    `reader="nano"` reads messages with Nemotron Nano via `reader_llm` (a real client).
+    `reader="nano"` reads messages with the Nano tier via `reader_llm` (a real client).
     """
     started = time.time()
     extractor = NanoExtractor(reader_llm) if reader == "nano" else None

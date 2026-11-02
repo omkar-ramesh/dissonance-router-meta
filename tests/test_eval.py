@@ -195,8 +195,8 @@ class TestSavedReports:
         from src.eval.runner import run_all
         from src.eval.sims import SimLLM
         rep = run_all(SimLLM(), compare=False, only={"aligned_user"})
-        reports.save(rep, "run-a", {"nano": "ollama"}, out=tmp_path)
-        reports.save(rep, "run-b", {"nano": "ollama", "ultra": "nebius"}, out=tmp_path)
+        reports.save(rep, "run-a", {"nano": "none"}, out=tmp_path)
+        reports.save(rep, "run-b", {"nano": "none", "ultra": "meta"}, out=tmp_path)
         cards = {c["id"]: c for c in reports.cards(tmp_path)}
         assert cards["run-a"]["source"] == "local" and cards["run-b"]["source"] == "api"
         assert "report" not in cards["run-a"] and reports.get("run-a", tmp_path)["report"]["scenarios"]

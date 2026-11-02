@@ -1,6 +1,6 @@
 """A simulated wallet: the router plans each answer within a $ budget.
 
-No real money moves. Costs are token counts x Token Factory list prices (config.PRICES),
+No real money moves. Costs are token counts x Meta Model API list prices (config.PRICES),
 the same numbers the rest of the app reports.
 
 Rules, in order, when a limit is set:
