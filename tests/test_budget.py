@@ -54,9 +54,18 @@ class TestPlan:
         assert "thinking is off" in p.reason
 
     def test_answer_can_never_cost_more_than_what_is_left(self):
-        remaining = 0.00005
+        remaining = 0.0003
         p = plan("nano", 100, limit=1.0, spent=1.0 - remaining, prices=P)
         assert cost(P, p.tier, 100, p.max_tokens) <= remaining + 1e-12
+
+    def test_every_planned_answer_leaves_room_for_reasoning(self):
+        # reasoning tokens count toward the cap: a cap below the floor would return an empty answer
+        for spent in (0.0, 0.0085, 0.0099):
+            try:
+                p = plan("nano", 200, limit=0.01, spent=spent, prices=P)
+            except BudgetExceeded:
+                continue
+            assert p.max_tokens >= budget.MIN_ANSWER_TOKENS
 
     def test_nothing_left_says_so(self):
         with pytest.raises(BudgetExceeded):
