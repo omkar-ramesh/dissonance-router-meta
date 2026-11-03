@@ -31,7 +31,7 @@ body{background:var(--bg);color:var(--text);font:13px/1.45 ui-monospace,"Cascadi
 .spacer{flex:1}
 header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);flex:none}
 header h1{margin:0;display:flex;align-items:center;gap:14px;cursor:pointer;color:var(--hi);font-size:17px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;white-space:nowrap;font-family:Orbitron,Bahnschrift,"Agency FB","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;text-shadow:0 0 14px #ffffff30}
-.themewrap{position:relative;display:flex;align-items:center}.iconbtn{width:33px;padding:6px 0;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}.iconbtn .ico{width:19px;height:19px;display:block}
+.themewrap{position:relative;display:flex;align-items:center}.iconbtn{width:33px;height:33px;padding:0;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}.iconbtn .ico{width:22px;height:22px;display:block}
 .iconbtn[aria-expanded=true]{border-color:var(--blue);color:var(--blue)}
 .thememenu{position:absolute;top:calc(100% + 10px);right:0;z-index:80;background:var(--s-pop,var(--panel));border:1px solid var(--line2,var(--line));border-radius:14px;padding:12px;box-shadow:0 14px 40px #0008}
 .tm-grid{display:grid;grid-template-columns:repeat(3,56px);gap:8px}
@@ -500,7 +500,7 @@ td{padding:5px 7px;border-bottom:1px solid var(--s-raise);vertical-align:top}
   <div class="spacer"></div>
   <div class="themewrap">
     <button class="btn iconbtn" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu" title="Theme: change how the app looks" aria-label="Theme">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(35 12 12)"><path d="M10.4 3.2h3.2v5.8h-3.2z"/><path d="M8.4 9h7.2v2.8H8.4z"/><path d="M8.4 11.8h7.2c0 4.2-1.1 6.9-3.6 9.2-2.5-2.3-3.6-5-3.6-9.2z"/></g></svg></button>
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><g transform="rotate(40 12 12)"><path d="M10.8 3.4a1.2 1.2 0 0 1 2.4 0V12h-2.4z"/><path d="M9.5 12h5v3h-5z"/><path d="M9.5 15h5c0 3-.9 5.2-2.5 7-1.6-1.8-2.5-4-2.5-7z"/></g></svg></button>
     <div class="thememenu" id="themeMenu" hidden role="group" aria-label="Choose a theme">
       <div class="tm-grid" id="themeMini" role="radiogroup" aria-label="Theme"></div>
       <div class="tm-name" id="themeName" aria-live="polite"></div></div></div>
