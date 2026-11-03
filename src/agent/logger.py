@@ -19,15 +19,16 @@ class DecisionLogger:
         conflict_score: float,
         reasoning: str,
         agent_response: str = "",
+        conflict_dims: str = "",
     ) -> int:
-        """Record one routing decision and return its id."""
+        """Record one routing decision and return its id. `conflict_dims`: the dimensions it contradicted."""
         with closing(get_connection(self.db_path)) as conn:
             with conn:
                 cursor = conn.execute(
                     "INSERT INTO interactions (user_id, user_message, agent_response, model_used, "
-                    "conflict_detected, conflict_score, routing_reason) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "conflict_detected, conflict_score, routing_reason, conflict_dims) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (user_id, request, agent_response, model_used,
-                     conflict_score > 0.0, conflict_score, reasoning),
+                     conflict_score > 0.0, conflict_score, reasoning, conflict_dims),
                 )
         return cursor.lastrowid
 
@@ -67,11 +68,13 @@ class DecisionLogger:
             out.setdefault(row["interaction_id"], []).append({"kind": row["kind"], "reason": row["reason"]})
         return out
 
-    def get_recent_decisions(self, user_id: str, limit: int = 5, after_id: int = 0) -> list[dict]:
-        """Return the user's latest decisions, newest first (only ids above `after_id`)."""
+    def get_recent_decisions(self, user_id: str, limit: int = 5, after_id: int = 0, skip_settled: bool = False) -> list[dict]:
+        """Return the user's latest decisions, newest first (only ids above `after_id`). `skip_settled`
+        leaves out turns whose contradiction the user has since accepted: the model context uses that."""
+        settled = " AND memory_state != 'settled'" if skip_settled else ""
         with closing(get_connection(self.db_path)) as conn:
             rows = conn.execute(
-                "SELECT * FROM interactions WHERE user_id = ? AND id > ? ORDER BY id DESC LIMIT ?",
+                f"SELECT * FROM interactions WHERE user_id = ? AND id > ?{settled} ORDER BY id DESC LIMIT ?",
                 (user_id, after_id, limit),
             ).fetchall()
         return [dict(row, conflict_detected=bool(row["conflict_detected"])) for row in rows]

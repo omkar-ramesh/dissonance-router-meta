@@ -366,10 +366,12 @@ def accept(req: AcceptRequest, agent: Agent = Depends(get_agent)) -> dict:
     """The user said yes to "update your stated preference?": adopt the observed value.
 
     `previous` is the old stated value; sending it back to /update-style undoes the change.
+    `memory` says what conflict-aware memory did: the turns that argued about this dimension,
+    folded into one preference note (bytes before and after).
     """
     limits.require_private_id(req.user_id)
-    previous = agent.accept_observed(req.user_id, req.dimension)
-    return {**agent.inspect(req.user_id), "previous": previous}
+    previous, settled = agent.accept(req.user_id, req.dimension)
+    return {**agent.inspect(req.user_id), "previous": previous, "memory": settled}
 
 
 def _iso_utc(timestamp: str) -> str:

@@ -230,12 +230,17 @@ aside.side{width:220px;flex:none;border-right:1px solid var(--line);position:rel
 .settings .card h3{margin:0 0 4px;font-size:13px}.settings .card p{margin:4px 0 10px}
 .field{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 /* memory */
-.mem{display:flex;gap:12px;align-items:flex-start}.mem .main{flex:1;min-width:0}
+.mem{display:flex;flex-direction:column;gap:10px}.mem .main{min-width:0}
 .mem .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mem .acts2{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.mem .tags{margin:5px 0 3px -6px;display:flex;flex-wrap:wrap;gap:4px 0}
+.mem .acts2{display:flex;gap:6px;flex-wrap:wrap}
 .mem .btn{padding:4px 10px;font-size:12px}
 .tag{display:inline-block;font-size:11px;padding:1px 8px;border-radius:99px;margin-left:6px}
 .tag.kept{color:var(--green);background:color-mix(in srgb,var(--green) 13%,transparent)}.tag.soon{color:var(--amber);background:color-mix(in srgb,var(--amber) 13%,transparent)}.tag.later{color:var(--muted);background:color-mix(in srgb,var(--muted) 13%,transparent)}
+.tag.open{color:var(--amber);background:color-mix(in srgb,var(--amber) 15%,transparent)}.tag.folded{color:var(--green);background:color-mix(in srgb,var(--green) 13%,transparent)}
+.transcript .calm{color:var(--muted);font-size:12px;margin:2px 0 8px}
+.transcript .open{border-left:3px solid var(--amber);padding-left:10px;margin:6px 0}
+.transcript .folded{border:1px solid color-mix(in srgb,var(--green) 40%,transparent);background:color-mix(in srgb,var(--green) 8%,transparent);border-radius:10px;padding:8px 12px;margin:8px 0;color:var(--text)}
 .transcript{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;max-height:420px;overflow:auto}
 .transcript .q{color:var(--text);font-weight:600;margin-top:8px}.transcript .a{color:var(--txt2);white-space:pre-wrap;margin:4px 0 8px;font:13px/1.55 system-ui,sans-serif}
 #remind .ask{border-color:color-mix(in srgb,var(--amber) 33%,transparent);background:color-mix(in srgb,var(--amber) 7%,transparent)}
@@ -1395,19 +1400,24 @@ async function loadMemory() {
   renderMemory(); remindMaybe(); renderTiles(); loadLessons();
 }
 function renderMemory() {
-  $("mem-intro").innerHTML = `Each <b>＋ New chat</b> saves the conversation before it here, compressed. It's deleted after ${days(memory.retention_days)}
-    unless you press <b>Keep</b>: the file and the message text both go (only routing numbers like tier and score stay).
-    Reminders come from dates, not from an AI call, so they cost no tokens.`;
-  const kept = memory.items.filter(i => i.kept).length, soon = memory.items.filter(i => !i.kept && i.days_left <= 3).length;
-  $("mem-stats").innerHTML = [["box", "Saved", memory.items.length, "blue"], ["shield", "Kept", kept, "green"], ["note", "Deleting within 3 days", soon, soon ? "amber" : "green"]]
+  $("mem-intro").innerHTML = `Each <b>＋ New chat</b> saves the conversation before it here. What is kept follows the dissonance signal:
+    <b>calm turns</b> keep only the outcome, turns with an <b>open contradiction</b> are kept word for word and held 3× longer,
+    and once you <b>accept</b> an update, the turns that argued about it fold into one preference note and leave the model's context.
+    Deleted after ${days(memory.retention_days)} unless you press <b>Keep</b>. Fixed rules, no AI call, no tokens.`;
+  const open = memory.items.filter(i => i.unresolved.length).length, raw = memory.items.reduce((a, i) => a + i.raw_bytes, 0),
+    now = memory.items.reduce((a, i) => a + i.bytes, 0), saved = raw ? Math.round(100 * (1 - now / raw)) : 0;
+  $("mem-stats").innerHTML = [["box", "Saved", memory.items.length, "blue"], ["note", "Unresolved (held longer)", open, open ? "amber" : "green"],
+    ["shield", "Space saved by compression", raw ? saved + "%" : "–", "green"]]
     .map(([ic, k, v, a]) => `<div class="kpi ${a}" style="cursor:default"><span class="ib">${ico(ic)}</span><span class="kt"><span class="k">${k}</span><span class="v">${v}</span></span></div>`).join("");
   $("mem-list").innerHTML = memory.items.length ? memory.items.map(i => {
     const when = new Date(i.archived_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
-    const status = i.kept ? `<span class="tag kept">kept</span>`
-      : `<span class="tag ${i.days_left <= 3 ? "soon" : "later"}">deletes in ${days(i.days_left)}</span>`;
+    const status = (i.kept ? `<span class="tag kept">kept</span>`
+      : `<span class="tag ${i.days_left <= 3 ? "soon" : "later"}">deletes in ${days(i.days_left)}</span>`)
+      + (i.unresolved.length ? `<span class="tag open" title="An open contradiction: kept word for word and held 3x longer">unresolved: ${esc(i.unresolved.join(", "))}</span>` : "")
+      + (i.settled_turns ? `<span class="tag folded">${i.settled_turns} turn${i.settled_turns === 1 ? "" : "s"} folded into a note</span>` : "");
     return `<div class="card" data-mem="${Number(i.id)}"><div class="mem"><div class="main">
-        <div class="title">${esc(i.title)}${status}</div>
-        <div class="note">${esc(when)} · ${i.turns} message${i.turns === 1 ? "" : "s"} · ${kb(i.bytes)} compressed</div></div>
+        <div class="title" title="${esc(i.title)}">${esc(i.title)}</div><div class="tags">${status}</div>
+        <div class="note">${esc(when)} · ${i.turns} message${i.turns === 1 ? "" : "s"} · ${kb(i.bytes)}${i.raw_bytes > i.bytes ? ` (was ${kb(i.raw_bytes)})` : ""}${i.calm_turns ? ` · ${i.calm_turns} calm turn${i.calm_turns === 1 ? "" : "s"} kept as outcome only` : ""}</div></div>
       <div class="acts2">
         <button class="btn ${i.kept ? "ghost" : "primary"}" data-keep="${i.kept ? 0 : 1}">${i.kept ? "Unkeep" : "Keep"}</button>
         <button class="btn" data-open>Open</button>
@@ -1465,7 +1475,9 @@ async function memoryAction(e) {
     if (open) { open.remove(); return; }
     const t = await api(`/memory/${encodeURIComponent(user)}/${id}`);
     card.insertAdjacentHTML("beforeend", `<div class="transcript">${t.turns.map(x =>
-      `<div class="q">You: ${esc(x.user_message)}</div><div class="a"><span class="pill ${esc(x.model_used)}">${esc(x.model_used)}</span> ${esc(x.agent_response || "(no answer)")}</div>`).join("")}</div>`);
+      x.state === "note" ? `<div class="folded">📌 ${esc(x.note)}</div>`
+      : x.state === "calm" ? `<div class="q">You: ${esc(x.user_message)}</div><div class="calm"><span class="pill ${esc(x.model_used)}">${esc(x.model_used)}</span> ${esc(x.outcome)} · answer not kept (no contradiction)</div>`
+      : `<div class="${x.state === "unresolved" ? "open" : ""}"><div class="q">You: ${esc(x.user_message)}${x.state === "unresolved" ? `<span class="tag open">unresolved: ${esc(x.dims.join(", "))}</span>` : ""}</div><div class="a"><span class="pill ${esc(x.model_used)}">${esc(x.model_used)}</span> ${esc(x.agent_response || "(no answer)")}</div></div>`).join("")}</div>`);
   }
 }
 
@@ -2107,10 +2119,11 @@ document.addEventListener("click", async e => {
     const dim = accept.dataset.accept; accept.disabled = true;
     try {
       const p = await api("/accept", { user_id: user, dimension: dim });
-      $("undo").innerHTML = `<div class="ask"><span class="t">Updated. Your ${esc(dim)} preference is now <b>${esc(p.stated_profile[dim])}</b>.</span>
+      const m = p.memory || {}, folded = m.turns ? ` <b>Memory:</b> ${esc(m.summary)}${m.context_tokens_saved ? ` About ${m.context_tokens_saved} tokens left the model's context.` : ""}` : "";
+      $("undo").innerHTML = `<div class="ask"><span class="t">Updated. Your ${esc(dim)} preference is now <b>${esc(p.stated_profile[dim])}</b>.${folded}</span>
         <button class="btn ghost" data-undo="${esc(dim)}" data-previous="${esc(p.previous)}">Undo</button></div>`;
       renderMirror(p); refresh();
-      clearTimeout(undoTimer); undoTimer = setTimeout(() => { $("undo").innerHTML = ""; }, 2000);
+      clearTimeout(undoTimer); undoTimer = setTimeout(() => { $("undo").innerHTML = ""; }, m.turns ? 7000 : 2000);
     } catch (err) { accept.disabled = false; add(esc(err.message), "note-line err"); }
     return;
   }

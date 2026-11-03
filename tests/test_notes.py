@@ -82,8 +82,10 @@ def test_deleting_a_conversation_erases_its_quotes_from_the_notes(agent):
     agent.respond("u", "Explain my secret project in more detail")
     agent.respond("u", "Elaborate on the secret part")
     item = agent.memory.archive("u")
-    eleven_days_later = datetime.fromisoformat(item["archived_at"]) + timedelta(days=11)
-    MemoryStore(agent.memory.db_path, agent.memory.folder, 10, now=lambda: eleven_days_later).sweep()
+    assert item["unresolved"] == ["length"]          # an open contradiction: held 3x longer than 10 days
+    at = lambda days: datetime.fromisoformat(item["archived_at"]) + timedelta(days=days)
+    assert MemoryStore(agent.memory.db_path, agent.memory.folder, 10, now=lambda: at(11)).sweep() == 0
+    MemoryStore(agent.memory.db_path, agent.memory.folder, 10, now=lambda: at(31)).sweep()
     notes = " | ".join(texts(agent))
     assert "secret" not in notes and "Learned: you keep wanting detailed answers." in notes
 

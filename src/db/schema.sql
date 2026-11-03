@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS interactions (
     conflict_detected BOOLEAN NOT NULL DEFAULT 0,
     conflict_score FLOAT NOT NULL DEFAULT 0.0,
     routing_reason TEXT NOT NULL DEFAULT '',
-    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    conflict_dims TEXT NOT NULL DEFAULT '',      -- dimensions this turn contradicted, comma-separated
+    memory_state TEXT NOT NULL DEFAULT ''        -- 'settled': its contradiction was accepted, so it leaves the context
 );
 
 CREATE TABLE IF NOT EXISTS conflicts (
@@ -95,7 +97,11 @@ CREATE TABLE IF NOT EXISTS conversations (
     file TEXT NOT NULL,
     archived_at TEXT NOT NULL,
     expires_at TEXT NOT NULL,
-    saved INTEGER NOT NULL DEFAULT 0
+    saved INTEGER NOT NULL DEFAULT 0,
+    unresolved TEXT NOT NULL DEFAULT '',         -- open contradictions in it, comma-separated: kept longer
+    raw_bytes INTEGER NOT NULL DEFAULT 0,        -- size before conflict-aware compression
+    settled_turns INTEGER NOT NULL DEFAULT 0,    -- contradicting turns folded into a preference note
+    calm_turns INTEGER NOT NULL DEFAULT 0        -- turns with no contradiction, kept as outcome only
 );
 
 -- A simulated wallet per user: a $ limit and what answers have cost so far (list prices).

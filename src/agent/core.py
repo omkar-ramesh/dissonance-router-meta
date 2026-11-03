@@ -68,7 +68,8 @@ class Agent:
         observed_updates = self.observe(user_id, message)
         analysis = self._analyze(user_id, message, gate=True)
         # Context is this conversation only; archived chats don't leak into a new one.
-        history = self.logger.get_recent_decisions(user_id, limit=HISTORY_TURNS, after_id=self.memory.boundary(user_id))
+        history = self.logger.get_recent_decisions(user_id, limit=HISTORY_TURNS, after_id=self.memory.boundary(user_id),
+                                                   skip_settled=True)
         try:
             result, spend = self._call(analysis, history, message)
         except (LLMError, BudgetExceeded):
@@ -126,7 +127,7 @@ class Agent:
         self.logger.log_feedback(user_id, row["id"], "regenerate")
         observed_updates = self.observe(user_id)
         analysis = self._analyze(user_id, row["user_message"], gate=True)
-        history = self.logger.get_recent_decisions(user_id, limit=HISTORY_TURNS + 1, after_id=start)[1:]
+        history = self.logger.get_recent_decisions(user_id, limit=HISTORY_TURNS + 1, after_id=start, skip_settled=True)[1:]
         result, spend = self._call(analysis, history, row["user_message"], REGENERATE_HINT)
         self._note_updates(user_id, observed_updates, row["id"], "asked for another answer")
         self.logger.update_decision(row["id"], analysis["model_chosen"], analysis["conflict_score"],
@@ -222,12 +223,20 @@ class Agent:
 
         Returns the previous stated value so the change can be undone.
         """
+        return self.accept(user_id, dimension)[0]
+
+    def accept(self, user_id: str, dimension: str) -> tuple[str, dict]:
+        """`accept_observed`, plus what memory did with it: the turns that argued about this dimension
+        are folded into one preference note and leave the model's context (see MemoryStore.settle)."""
         previous = self.profiles.get_stated_profile(user_id)[dimension]
         observed = self.profiles.get_observed_profile(user_id)[dimension]
         self.profiles.update_stated(user_id, dimension, observed)
         self.logger.resolve_conflicts(user_id, dimension)
         self.notes.log(user_id, "accepted", dimension, observed)
-        return previous
+        settled = self.memory.settle(user_id, dimension)
+        if settled["turns"]:
+            self.notes.log(user_id, "compressed", dimension, observed, settled["summary"])
+        return previous, settled
 
     def forget_observed(self, user_id: str) -> None:
         """Drop everything learned so far: past turns stop counting, the observed profile goes back to unknown."""
@@ -323,9 +332,10 @@ class Agent:
         user_id = analysis["user_id"]
         stated, observed = analysis["stated_profile"], analysis["observed_profile"]
         seen = self.logger.get_conflict_repeats(user_id, stated, observed)
-        first = []                                  # contradictions seen for the first time: worth a note
+        first, dims = [], []                        # contradictions seen for the first time: worth a note
         for dim, score in analysis["conflicts_detected"].items():
             if score > 0 and not analysis.get("gated"):
+                dims.append(dim)
                 if not seen.get(dim):
                     first.append(dim)
                 self.logger.log_conflict(user_id, dim, stated[dim], observed[dim], score)
@@ -336,6 +346,7 @@ class Agent:
             analysis["conflict_score"],
             analysis["routing_reason"],
             agent_response,
+            ",".join(dims),
         )
         for dim in first:
             self.notes.log(user_id, "contradiction", dim, f"{stated[dim]}>{observed[dim]}",

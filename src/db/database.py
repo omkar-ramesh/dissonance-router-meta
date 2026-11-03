@@ -18,11 +18,24 @@ def get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after a table first shipped: CREATE TABLE IF NOT EXISTS won't add them to an old database.
+ADDED_COLUMNS = {
+    "interactions": {"conflict_dims": "TEXT NOT NULL DEFAULT ''", "memory_state": "TEXT NOT NULL DEFAULT ''"},
+    "conversations": {"unresolved": "TEXT NOT NULL DEFAULT ''", "raw_bytes": "INTEGER NOT NULL DEFAULT 0",
+                      "settled_turns": "INTEGER NOT NULL DEFAULT 0", "calm_turns": "INTEGER NOT NULL DEFAULT 0"},
+}
+
+
 def init_db(db_path: Optional[str] = None) -> None:
-    """Create all tables if they don't exist yet."""
+    """Create all tables if they don't exist yet, and add any newer columns to old ones."""
     conn = get_connection(db_path)
     try:
         conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+        for table, cols in ADDED_COLUMNS.items():
+            have = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+            for name, decl in cols.items():
+                if name not in have:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
         conn.commit()
     finally:
         conn.close()
