@@ -105,6 +105,24 @@ CREATE TABLE IF NOT EXISTS budgets (
     spent_usd REAL NOT NULL DEFAULT 0
 );
 
+-- One row per Meta API call (numbers only, no text): the Budget tab's Usage section reads this.
+CREATE TABLE IF NOT EXISTS usage_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'app',
+    tier TEXT NOT NULL,
+    model TEXT NOT NULL,
+    effort TEXT NOT NULL DEFAULT '',
+    input_tokens INTEGER NOT NULL DEFAULT 0,
+    cached_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    reasoning_tokens INTEGER NOT NULL DEFAULT 0,
+    cost_usd REAL NOT NULL DEFAULT 0,
+    latency_ms INTEGER NOT NULL DEFAULT 0,
+    ttft_ms INTEGER NOT NULL DEFAULT 0,
+    estimated INTEGER NOT NULL DEFAULT 0
+);
+
 -- What the Nano signal reader found in a message, so each message is read once.
 CREATE TABLE IF NOT EXISTS signal_cache (
     text_hash TEXT PRIMARY KEY,

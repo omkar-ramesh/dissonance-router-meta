@@ -178,7 +178,7 @@ def main(argv):
     args = p.parse_args(argv)
     from src.agent.llm_client import LLMClient
     try:
-        rep = run(LLMClient.from_config(), judge_tier=args.judge, only=set(args.only.split(",")) if args.only else None)
+        rep = run(LLMClient.from_config(source="eval"), judge_tier=args.judge, only=set(args.only.split(",")) if args.only else None)
     except LLMError as e:
         print(f"model call failed: {e}")
         return 1

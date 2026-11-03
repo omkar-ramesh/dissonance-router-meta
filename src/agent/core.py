@@ -38,6 +38,7 @@ class Agent:
         NanoExtractor (a short Muse Spark call, keywords as fallback). `memory_dir` holds archived
         conversations (default: a `memory` folder next to the database)."""
         init_db(db_path)
+        self.db_path = db_path
         self.memory = MemoryStore(db_path, memory_dir or Path(db_path).parent / "memory", config.MEMORY_RETENTION_DAYS)
         self.profiles = ProfileManager(db_path)
         self.detector = ConflictDetector()

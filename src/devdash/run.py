@@ -34,7 +34,7 @@ class Scenarios:
     """End-to-end checks against the real models: does the agent route and answer as designed?"""
 
     def __init__(self):
-        self.llm = LLMClient.from_config()
+        self.llm = LLMClient.from_config(source="devdash")
         self.agent = Agent(os.path.join(tempfile.mkdtemp(), "live.db"), self.llm)
         self.last: dict = {}
 

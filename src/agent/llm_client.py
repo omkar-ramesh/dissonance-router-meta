@@ -13,6 +13,7 @@ from typing import Optional
 import httpx
 
 from src import config
+from src.agent import usage
 
 # Some reasoning models inline their thinking in <think> tags; strip them if they appear.
 THINK_RE = re.compile(r"<think>(.*?)</think>", re.S)
@@ -104,10 +105,14 @@ class LLMClient:
         prices: Optional[dict] = None,
         reasoning: Optional[dict] = None,
         max_tokens: Optional[dict] = None,
+        ledger=None,
+        source: str = "app",
     ):
         """`context_windows` is {tier: tokens}. `prices` maps tier -> {"in", "out", "cached"} USD per 1M
         tokens, for cost estimates. `reasoning` ({tier: effort}) is the default reasoning_effort per tier;
-        `max_tokens` ({tier: n}, 0 = none) caps output."""
+        `max_tokens` ({tier: n}, 0 = none) caps output.
+        `ledger` (a usage.Ledger) logs every call under `source` ("app", "eval", ...); none = no logging."""
+        self.ledger, self.source = ledger, source
         self.models = models
         self._context_windows = context_windows or {}
         self._prices = prices or {}
@@ -121,7 +126,7 @@ class LLMClient:
         return httpx.Client(base_url=base_url.rstrip("/"), headers=headers, timeout=timeout, transport=transport)
 
     @classmethod
-    def from_config(cls) -> "LLMClient":
+    def from_config(cls, source: str = "app") -> "LLMClient":
         """Build a client for the models of the active profile in config."""
         if not config.META_API_KEY:
             raise LLMError("MODEL_API_KEY is not set in .env (get a key at https://dev.meta.ai)")
@@ -129,6 +134,7 @@ class LLMClient:
             config.META_BASE_URL, config.MODEL_TIERS, config.META_API_KEY,
             context_windows=config.CONTEXT_WINDOWS, prices=config.PRICES,
             reasoning=config.REASONING, max_tokens=config.MAX_TOKENS,
+            ledger=usage.ledger_for(config.DB_PATH), source=source,
         )
 
     def effort_for(self, tier: str, reasoning: Optional[str] = None) -> str:
@@ -202,7 +208,7 @@ class LLMClient:
         cached = ((usage.get("prompt_tokens_details") or {}).get("cached_tokens") or 0)
         reasoning_count = ((usage.get("completion_tokens_details") or {}).get("reasoning_tokens"))
 
-        return LLMResult(
+        result = LLMResult(
             text=text,
             tier=tier,
             model=model,
@@ -222,6 +228,9 @@ class LLMClient:
             reasoning_token_count=reasoning_count,
             cached_tokens=cached,
         )
+        if self.ledger:
+            self.ledger.record(result, self.source)
+        return result
 
     def _stream(self, payload: dict, model: str, start: float) -> tuple[str, str, dict, Optional[int]]:
         """One streamed call: (answer text, streamed reasoning text, usage, time to first token ms)."""

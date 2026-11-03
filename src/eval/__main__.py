@@ -27,7 +27,7 @@ def main():
     real = None
     if args.live:
         from src.agent.llm_client import LLMClient
-        real = LLMClient.from_config()
+        real = LLMClient.from_config(source="eval")
     llm = real or SimLLM()
     report = run_all(llm, compare=not args.no_compare, only=set(args.only.split(",")) if args.only else None,
                      reader=args.reader, reader_llm=real)

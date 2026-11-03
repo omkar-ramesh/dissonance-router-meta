@@ -11,7 +11,7 @@ from src.agent.honesty import find_unbacked_sources
 from src.api import limits
 from src.api.dependencies import get_agent
 from src.eval import demos, reports
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from src.api.schemas import (AcceptRequest, BudgetUpdate, ChatRequest, FeedbackRequest, HopeReview, KeepRequest, ModeRequest, NewChat, NoteMarks,
                              RegenerateRequest, StyleUpdate)
@@ -262,6 +262,28 @@ def set_budget(req: BudgetUpdate, agent: Agent = Depends(get_agent)) -> dict:
     limits.require_private_id(req.user_id)
     agent.budgets.set_limit(req.user_id, req.limit_usd, req.reset_spent)
     return _budget(agent, req.user_id)
+
+
+@router.get("/usage")
+def get_usage(days: int = Query(0, ge=0, le=365, description="last N days (UTC); 0 = all time"),
+              agent: Agent = Depends(get_agent)) -> dict:
+    """Every Meta API call made through this project (app, eval runs, dev dashboard): tokens, cost,
+    cache hits, by model / tier / source / day, and the latest calls. Numbers only, no message text.
+    `saved_reports` is what the saved test runs in docs/reports/ say they cost, for comparison."""
+    from src.agent.usage import Ledger
+    out = Ledger(agent.db_path).summary(days)
+    cards = reports.cards()
+    out["saved_reports"] = {"count": len(cards), "cost_usd": round(sum(c.get("cost_usd") or 0 for c in cards), 4)}
+    out["prices_per_1m_tokens"] = config.PRICES
+    return out
+
+
+@router.get("/usage.csv")
+def usage_csv(days: int = Query(0, ge=0, le=365), agent: Agent = Depends(get_agent)) -> Response:
+    """The raw ledger as a CSV download."""
+    from src.agent.usage import Ledger
+    return Response(Ledger(agent.db_path).csv(days), media_type="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=usage.csv"})
 
 
 def _budget(agent, user_id):

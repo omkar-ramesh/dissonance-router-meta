@@ -113,6 +113,11 @@ aside.side{width:220px;flex:none;border-right:1px solid var(--line);position:rel
 [data-panel=budget] .steps>*,[data-panel=about] .steps>*{grid-column:span 4}
 [data-panel=budget]>.pn:nth-of-type(n){grid-column:span 6}
 [data-panel=budget]>.pn:nth-last-child(2){grid-column:span 7}[data-panel=budget]>.pn:last-child{grid-column:span 5}
+#usage-pn{grid-column:span 12!important}#usage-pn header{display:flex;align-items:center;gap:8px}#usage-pn header .pill{margin-left:auto}
+.chipbtn.on{color:var(--hi);border-color:var(--blue)}
+.ugrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}.ustat{background:var(--s-inset);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.ustat b{display:block;font-size:22px;line-height:1.1;color:var(--hi)}.ustat span{font-size:11px;color:var(--muted)}
+.utables{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-top:14px}.utables h4{margin:0 0 6px;font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.uscroll{overflow-x:auto}
 [data-panel=memory] .kpis3>*{grid-column:span 4}
 [data-panel=memory] #mem-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;align-items:start}
 [data-panel=notes] .two.wide-right>:nth-child(1){grid-column:span 4}[data-panel=notes] .two.wide-right>:nth-child(2){grid-column:span 8}
@@ -588,6 +593,11 @@ td{padding:5px 7px;border-bottom:1px solid var(--s-raise);vertical-align:top}
         <div><i>2</i><b>Thinking off, shorter answers</b><span>once under 25% is left.</span></div>
         <div><i>3</i><b>Never overspends</b><span>an answer can't cost more than what's left; at zero it stops.</span></div>
       </div>
+      <section class="pn" id="usage-pn"><header><svg class="ico" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><b>Usage <span class="note">· every Meta API call this project made, updated live</span></b><span class="pill ok" id="usage-live">live</span></header>
+        <div class="field"><span class="note">Range</span>
+          <button class="chipbtn on" data-urange="0">All time</button><button class="chipbtn" data-urange="7">7 days</button><button class="chipbtn" data-urange="1">Last 24 h</button>
+          <a class="btn ghost" id="usage-csv" href="/usage.csv" download>Export CSV</a></div>
+        <div id="usage-body"><div class="note">Loading usage…</div></div></section>
       <section class="pn" hidden><header><svg class="ico" viewBox="0 0 24 24"><path d="M3 17l5-6 4 3 8-9"/></svg><b>Live usage <span class="note">· updates after every answer</span></b></header>
         <div id="budget-graph"></div></section>
       <section class="pn" hidden><header><svg class="ico" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/></svg><b>Predicted vs measured</b></header>
@@ -904,6 +914,56 @@ async function loadBudget() {
   try { wallet = await api("/budget/" + encodeURIComponent(user)); } catch (e) { wallet = { limit_usd: 0, spent_usd: 0 }; }
   renderBudget(); renderMeter(); renderTiles();
 }
+/* ---------- usage ledger (every Meta API call, live) ---------- */
+let usageDays = 0, usageTimer = null, usageSig = "";
+const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(2) + "M" : n >= 1e4 ? (n / 1e3).toFixed(1) + "k" : String(n || 0);
+const fmtT = iso => new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+function usageTable(title, rows) {
+  if (!rows.length) return "";
+  return `<div><h4>${title}</h4><div class="uscroll"><table><tr><th></th><th>Calls</th><th>In</th><th>Out</th><th>Cost</th></tr>`
+    + rows.map(r => `<tr><td>${esc(r.name)}</td><td>${fmtN(r.calls)}</td><td>${fmtN(r.input_tokens)}</td><td>${fmtN(r.output_tokens)}</td><td>${usd(r.cost_usd)}</td></tr>`).join("") + `</table></div></div>`;
+}
+function renderUsage(u) {
+  const t = u.total, d = u.by_day.slice(-14), max = Math.max(...d.map(x => x.cost_usd), 1e-9), W = 640, H = 110, bw = d.length ? Math.min(34, (W - 16) / d.length - 6) : 0;
+  const bars = d.map((x, i) => { const h = Math.max(2, (H - 34) * x.cost_usd / max), cx = 8 + (i + .5) * (W - 16) / d.length;
+    return `<rect x="${cx - bw / 2}" y="${H - 18 - h}" width="${bw}" height="${h}" rx="3" fill="var(--blue)"><title>${x.day}: ${x.calls} calls, ${usd(x.cost_usd)}</title></rect>
+      <text x="${cx}" y="${H - 5}" text-anchor="middle" font-size="9" fill="var(--muted)">${x.day.slice(5)}</text>
+      <text x="${cx}" y="${H - 22 - h}" text-anchor="middle" font-size="9" fill="var(--txt2)">${usd(x.cost_usd)}</text>`; }).join("");
+  const rep = u.saved_reports;
+  $("usage-body").innerHTML = !t.calls
+    ? `<div class="note">No calls logged yet. Send a message or run an eval and it shows up here within seconds. Saved reports in this project say they cost <b>${usd(rep.cost_usd)}</b> across ${rep.count} runs (made before the ledger existed, so not itemised here).</div>`
+    : `<div class="ugrid">
+        <div class="ustat"><b>${fmtN(t.calls)}</b><span>requests</span></div>
+        <div class="ustat"><b>${fmtN(t.input_tokens)}</b><span>input tokens · ${t.cache_hit_rate}% cached</span></div>
+        <div class="ustat"><b>${fmtN(t.output_tokens)}</b><span>output tokens · ${fmtN(t.reasoning_tokens)} thinking</span></div>
+        <div class="ustat"><b>${usd(t.cost_usd)}</b><span>cost at list prices</span></div>
+        <div class="ustat"><b>${(t.avg_latency_ms / 1000).toFixed(1)} s</b><span>average latency</span></div>
+        <div class="ustat"><b>${t.estimated_calls}</b><span>calls with estimated tokens</span></div></div>
+      <div class="note">Cost per day (UTC) · last ${d.length} day${d.length > 1 ? "s" : ""} with calls</div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:130px" role="img" aria-label="Cost per day">${bars}</svg>
+      <div class="utables">${usageTable("By model", u.by_model)}${usageTable("By tier", u.by_tier)}${usageTable("By source", u.by_source)}${usageTable("By reasoning effort", u.by_effort)}</div>
+      <div class="utables" style="grid-template-columns:1fr"><div><h4>Latest calls</h4><div class="uscroll"><table><tr><th>Time</th><th>Source</th><th>Tier</th><th>Effort</th><th>In</th><th>Cached</th><th>Out</th><th>Thinking</th><th>Cost</th><th>Latency</th></tr>`
+      + u.recent.slice(0, 10).map(r => `<tr><td>${fmtT(r.ts)}</td><td>${esc(r.source)}</td><td><span class="pill ${esc(r.tier)}">${esc(r.tier)}</span></td><td>${esc(r.effort || "–")}</td><td>${fmtN(r.input_tokens)}</td><td>${fmtN(r.cached_tokens)}</td><td>${fmtN(r.output_tokens)}</td><td>${fmtN(r.reasoning_tokens)}</td><td>${usd(r.cost_usd)}</td><td>${(r.latency_ms / 1000).toFixed(1)} s</td></tr>`).join("")
+      + `</table></div></div></div>
+      <div class="note basis"><b>Where this comes from</b>: the API's own usage field for every call, logged as it finishes (message text is never stored). Eval runs and the dev dashboard log here too, tagged by source. Meta's dashboard counts in UTC days, so compare its totals with the ones above. Saved reports from before the ledger say <b>${usd(rep.cost_usd)}</b> across ${rep.count} runs.</div>`;
+}
+async function loadUsage() {
+  try {
+    const u = await api("/usage?days=" + usageDays), sig = JSON.stringify(u);
+    $("usage-live").textContent = "live"; $("usage-live").className = "pill ok";
+    if (sig !== usageSig) { usageSig = sig; renderUsage(u); }
+  } catch (e) { $("usage-live").textContent = "offline"; $("usage-live").className = "pill bad"; }
+}
+function stopUsage() { clearInterval(usageTimer); usageTimer = null; }
+function startUsage() {
+  stopUsage(); usageSig = ""; loadUsage();
+  usageTimer = setInterval(() => { if (view !== "settings" || section !== "budget") return stopUsage(); if (!document.hidden) loadUsage(); }, 3000);
+}
+document.querySelectorAll("[data-urange]").forEach(b => b.addEventListener("click", () => {
+  usageDays = Number(b.dataset.urange); usageSig = "";
+  document.querySelectorAll("[data-urange]").forEach(x => x.classList.toggle("on", x === b));
+  $("usage-csv").href = "/usage.csv?days=" + usageDays; loadUsage();
+}));
 async function saveBudget(reset) {
   const v = Number($("budget-limit").value);
   if (!(v >= 0 && v <= 100)) { $("budget-view").innerHTML = `<div class="note bad">Enter a limit between $0 and $100.</div>`; return; }
@@ -1799,7 +1859,7 @@ function showSection(sec) {
   if (sec === "overview") renderTiles();
   if (sec === "memory") loadMemory();
   if (sec === "notes") loadNotes(true);
-  if (sec === "budget") loadBudget();
+  if (sec === "budget") { loadBudget(); startUsage(); } else stopUsage();
 
   store.set("dr-section", sec);
 }
