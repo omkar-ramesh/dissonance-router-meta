@@ -218,6 +218,43 @@ def get(report_id: str, out: Path = REPORTS_DIR) -> dict | None:
     return None
 
 
+_SAVINGS_CACHE: dict = {}
+
+
+def savings(out: Path = REPORTS_DIR) -> dict:
+    """The router against always-Nano and always-Ultra, added up over every saved live scenario run.
+
+    `matched` = the router served the tier the scenario labels as ideal; `under` = a cheaper tier than
+    ideal (could cost quality); `over` = a dearer one (wastes money). Simulated runs are left out."""
+    files = [p for folder in (out, out / "archive") if folder.is_dir() for p in [*folder.glob("*.json.gz"), *folder.glob("*.json")]]
+    sig = (str(out), len(files), max((p.stat().st_mtime for p in files), default=0))
+    if _SAVINGS_CACHE.get("sig") == sig:
+        return _SAVINGS_CACHE["value"]
+    total: dict = {}
+    runs = 0
+    for path in files:
+        try:
+            data = _read(path)
+        except (OSError, ValueError):
+            continue
+        rep = data.get("report") or {}
+        if data.get("kind") != "scenarios" or rep.get("simulated") or "strategies" not in rep:
+            continue
+        runs += 1
+        for name, s in rep["strategies"].items():
+            t = total.setdefault(name, dict.fromkeys(("cost_usd", "matched", "under", "over", "graded", "latency_ms", "output_tokens"), 0))
+            for k in t:
+                t[k] += s.get(k) or 0
+    value: dict = {"runs": runs, "strategies": total}
+    r, u = total.get("router"), total.get("always-ultra")
+    if r and u and u["cost_usd"] and u["latency_ms"] and r["graded"]:
+        value |= {"saved_vs_ultra_pct": round(100 * (1 - r["cost_usd"] / u["cost_usd"]), 1),
+                  "faster_vs_ultra_pct": round(100 * (1 - r["latency_ms"] / u["latency_ms"]), 1),
+                  "router_match_pct": round(100 * r["matched"] / r["graded"], 1)}
+    _SAVINGS_CACHE.update(sig=sig, value=value)
+    return value
+
+
 def compress_all(out: Path = REPORTS_DIR) -> list[Path]:
     """Rewrite every report as .json.gz, re-deriving the card so new fields appear."""
     made = []

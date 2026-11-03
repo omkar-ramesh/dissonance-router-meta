@@ -100,3 +100,37 @@ class TestApi:
         r = http.get("/usage.csv")
         assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
         assert len(r.text.strip().splitlines()) == 2
+
+
+class TestSavings:
+    def test_adds_up_live_scenario_runs_and_skips_simulated(self, tmp_path):
+        import gzip, json
+        from src.eval import reports
+
+        def strat(r_cost, u_cost):
+            base = dict(matched=1, under=0, over=0, graded=1, latency_ms=1000, input_tokens=1, output_tokens=1)
+            return {"router": {**base, "cost_usd": r_cost, "latency_ms": 1000},
+                    "always-ultra": {**base, "cost_usd": u_cost, "matched": 0, "over": 1, "latency_ms": 4000},
+                    "always-nano": {**base, "cost_usd": 0.0, "under": 1, "matched": 0}}
+
+        def save(name, kind, simulated, strategies):
+            card = {"kind": kind, "report": {"simulated": simulated, "strategies": strategies}}
+            (tmp_path / f"{name}.json.gz").write_bytes(gzip.compress(json.dumps(card).encode()))
+
+        save("a", "scenarios", False, strat(1.0, 4.0))
+        save("b", "scenarios", False, strat(1.0, 4.0))
+        save("c", "scenarios", True, strat(9.0, 9.0))         # simulated: ignored
+        save("d", "compare", False, strat(9.0, 9.0))          # not a scenario run: ignored
+        out = reports.savings(tmp_path)
+        assert out["runs"] == 2 and out["strategies"]["router"]["cost_usd"] == 2.0
+        assert out["saved_vs_ultra_pct"] == 75.0 and out["faster_vs_ultra_pct"] == 75.0
+        assert out["router_match_pct"] == 100.0
+
+    def test_no_reports_means_no_headline_numbers(self, tmp_path):
+        from src.eval import reports
+        out = reports.savings(tmp_path)
+        assert out["runs"] == 0 and "saved_vs_ultra_pct" not in out
+
+    def test_endpoint(self):
+        body = TestClient(app).get("/savings").json()
+        assert "runs" in body and "strategies" in body

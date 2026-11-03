@@ -264,6 +264,12 @@ def set_budget(req: BudgetUpdate, agent: Agent = Depends(get_agent)) -> dict:
     return _budget(agent, req.user_id)
 
 
+@router.get("/savings")
+def get_savings() -> dict:
+    """What routing saves: the router vs always-Nano and always-Ultra over every saved live run."""
+    return reports.savings()
+
+
 @router.get("/usage")
 def get_usage(days: int = Query(0, ge=0, le=365, description="last N days (UTC); 0 = all time"),
               agent: Agent = Depends(get_agent)) -> dict:
