@@ -31,6 +31,17 @@ body{background:var(--bg);color:var(--text);font:13px/1.45 ui-monospace,"Cascadi
 .spacer{flex:1}
 header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line);flex:none}
 header h1{margin:0;display:flex;align-items:center;gap:14px;cursor:pointer;color:var(--hi);font-size:17px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;white-space:nowrap;font-family:Orbitron,Bahnschrift,"Agency FB","Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;text-shadow:0 0 14px #ffffff30}
+.themewrap{position:relative}.iconbtn{width:36px;height:36px;padding:0;display:grid;place-items:center}.iconbtn .ico{width:18px;height:18px}
+.iconbtn[aria-expanded=true]{border-color:var(--blue);color:var(--blue)}
+.thememenu{position:absolute;top:calc(100% + 10px);right:0;z-index:80;background:var(--s-pop,var(--panel));border:1px solid var(--line2,var(--line));border-radius:14px;padding:12px;box-shadow:0 14px 40px #0008}
+.tm-grid{display:grid;grid-template-columns:repeat(3,56px);gap:8px}
+.tm{all:unset;cursor:pointer;display:block;border-radius:10px}
+.tm .th-sq{display:block;width:56px;height:56px;aspect-ratio:auto;border-radius:10px;border-width:2px}
+.tm:hover .th-sq{transform:translateY(-2px)}.tm:focus-visible .th-sq{outline:2px solid var(--blue);outline-offset:2px}
+.tm.on .th-sq{border-color:var(--blue);box-shadow:0 0 0 2px color-mix(in srgb,var(--blue) 35%,transparent)}
+.tm .ic{left:12%;right:12%;top:10%;bottom:10%}
+.tm-name{margin-top:10px;text-align:center;font-size:12px;color:var(--txt2,var(--muted));min-height:1.2em}
+@media(prefers-reduced-motion:reduce){.tm:hover .th-sq{transform:none}}
 header h1::before{content:"";width:6px;height:22px;border-radius:3px;background:linear-gradient(180deg,#0064e0,#a033ff,var(--pink))}
 header h1 .tag{font-size:10px;font-weight:500;letter-spacing:.24em;color:var(--muted);padding-left:14px;border-left:1px solid var(--line);text-shadow:none}
 header h1 .tag i{font-style:normal;color:var(--hi);opacity:.55}
@@ -469,6 +480,12 @@ td{padding:5px 7px;border-bottom:1px solid var(--s-raise);vertical-align:top}
   <h1 id="home" title="Back to the main page">THE DISSONANCE ROUTER<span class="tag">WHAT YOU SAY <i>VS</i> WHAT YOU DO</span></h1>
   <span class="pill ok" id="status">● connecting…</span>
   <div class="spacer"></div>
+  <div class="themewrap">
+    <button class="btn iconbtn" id="themeBtn" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu" title="Theme: change how the app looks" aria-label="Theme">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 3.5l-9 9"/><path d="M11.5 12.5c-2.6-.9-5.2.6-5.2 3.2 0 1.5-.9 2.6-2.3 3.1 1 1.1 2.5 1.7 4.2 1.7 2.9 0 5-2.1 5-4.5z"/></svg></button>
+    <div class="thememenu" id="themeMenu" hidden role="group" aria-label="Choose a theme">
+      <div class="tm-grid" id="themeMini" role="radiogroup" aria-label="Theme"></div>
+      <div class="tm-name" id="themeName" aria-live="polite"></div></div></div>
   <button class="btn" id="tutOpen" title="Tutorials: every button and feature, explained">? Tutorials</button>
   <button class="btn" id="newchat" title="Archive this conversation to Memory and start a new one (your profile stays)">＋ New chat</button>
   <button class="btn primary" id="demo" title="Starts a fresh session and plays the say-concise, ask-for-detail contradiction with real model calls">▶ Play the demo</button>
@@ -2172,6 +2189,7 @@ function setTheme(t) {
   if (t === "navy") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
   try { localStorage.setItem("dr-theme", t === "navy" ? "" : t); } catch {}
   document.querySelectorAll("[data-theme-pick]").forEach(b => { const on = b.dataset.themePick === t; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); });
+  if (typeof showThemeName === "function") showThemeName(t);
 }
 // [key, name, mood, bg, nano, super, ultra, icon colour from, icon colour to]
 const THEMES = [
@@ -2198,18 +2216,36 @@ const ICONS = {
   saffron: f => [`<circle cx="25" cy="25" r="11" fill="#ff9a1f"/><path d="M19 49h27a10 10 0 0 0 0-20 13 13 0 0 0-24 4 8 8 0 0 0-3 16z" fill="${f}" fill-opacity=".85"/>`, HL("M45 38c-1 2.5-3 4-5 4.5")],
   light: f => [`<path d="M32 6v14" stroke="#0866ff" stroke-width="5" stroke-linecap="round"/><path d="M13 42a19 19 0 0 1 38 0z" fill="${f}" fill-opacity=".85"/><circle cx="32" cy="47" r="7" fill="#ffd54a"/>`, HL("M41 31c2 1.5 3 3.5 3.5 6")],
 };
-const themeIcon = (k, from, to) => {
-  const [shape, hl] = ICONS[k](`url(#tg-${k})`);
-  return `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tg-${k}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${to}"/><stop offset="1" stop-color="${from}"/></linearGradient>` +
-    `<filter id="tf-${k}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>` +
-    `<g filter="url(#tf-${k})" opacity=".75">${shape}</g><g>${shape}</g>${hl}</svg>`;
+const themeIcon = (k, from, to, uid = "") => {
+  const [shape, hl] = ICONS[k](`url(#tg-${uid}${k})`);
+  return `<svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="tg-${uid}${k}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${to}"/><stop offset="1" stop-color="${from}"/></linearGradient>` +
+    `<filter id="tf-${uid}${k}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter></defs>` +
+    `<g filter="url(#tf-${uid}${k})" opacity=".75">${shape}</g><g>${shape}</g>${hl}</svg>`;
 };
 $("themeBtns").innerHTML = THEMES.map(([k, name, mood, bg, n, su, u, from, to]) =>
   `<button class="th" role="radio" data-theme-pick="${k}" title="${name}"><span class="th-sq" style="background:${bg}">` +
   `<span class="ic">${themeIcon(k, from, to)}</span>` +
   `<span class="dots"><i style="background:${n}"></i><i style="background:${su}"></i><i style="background:${u}"></i></span>` +
   `</span><span><b>${name}</b><small>${mood}</small></span></button>`).join("");
+$("themeMini").innerHTML = THEMES.map(([k, name, mood, bg, n, su, u, from, to]) =>
+  `<button class="tm" role="radio" data-theme-pick="${k}" title="${name}" aria-label="${name}"><span class="th-sq" style="background:${bg}"><span class="ic">${themeIcon(k, from, to, "m-")}</span></span></button>`).join("");
 document.querySelectorAll("[data-theme-pick]").forEach(b => b.addEventListener("click", () => setTheme(b.dataset.themePick)));
+const themeLabel = k => (THEMES.find(t => t[0] === k) || THEMES[0])[1];
+const currentTheme = () => document.documentElement.dataset.theme || "navy";
+const showThemeName = k => { $("themeName").textContent = themeLabel(k || currentTheme()); };
+document.querySelectorAll(".tm").forEach(b => {
+  b.addEventListener("mouseenter", () => showThemeName(b.dataset.themePick));
+  b.addEventListener("focus", () => showThemeName(b.dataset.themePick));
+  b.addEventListener("mouseleave", () => showThemeName());
+  b.addEventListener("blur", () => showThemeName());
+});
+function toggleThemeMenu(open) {
+  const menu = $("themeMenu"), show = open ?? menu.hidden;
+  menu.hidden = !show; $("themeBtn").setAttribute("aria-expanded", show); showThemeName();
+}
+$("themeBtn").addEventListener("click", e => { e.stopPropagation(); toggleThemeMenu(); });
+document.addEventListener("click", e => { if (!$("themeMenu").hidden && !e.target.closest(".themewrap")) toggleThemeMenu(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("themeMenu").hidden) { toggleThemeMenu(false); $("themeBtn").focus(); } });
 setTheme(document.documentElement.dataset.theme || "navy");
 </script>
 </body>
