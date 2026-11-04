@@ -108,6 +108,23 @@ class TestRetention:
         row = agent.logger.get_recent_decisions("u", 1)[0]
         assert row["user_message"] == "" and row["agent_response"] == "" and row["model_used"] == "nano"
 
+    def test_deleting_the_newest_archive_does_not_revive_its_turns(self, setup):
+        agent, clock = setup
+        chat(agent, "one", "two")
+        agent.memory.archive("u")
+        chat(agent, "three")
+        newest = agent.memory.archive("u")
+        agent.memory.delete("u", newest["id"])                 # by hand ...
+        assert agent.memory.boundary("u") == 3
+        chat(agent, "four")
+        clock.days(11)
+        agent.memory.sweep()                                   # ... and by the 10-day sweep
+        assert agent.memory.list("u") == [] and agent.memory.boundary("u") == 3
+        agent.respond("u", "five")
+        sent = [m["content"] for m in agent.llm.calls[-1]]
+        assert not any("one" in c or "two" in c or "three" in c for c in sent[1:-1])
+        assert agent.memory.archive("u")["turns"] == 2         # only "four" and "five"
+
     def test_kept_conversation_is_never_deleted(self, setup):
         agent, clock = setup
         chat(agent, "Explain DNS")

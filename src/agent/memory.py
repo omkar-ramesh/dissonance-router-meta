@@ -48,7 +48,9 @@ class MemoryStore:
     def boundary(self, user_id: str) -> int:
         """Id of the last archived interaction: the current conversation starts after it."""
         with closing(get_connection(self.db_path)) as conn:
-            row = conn.execute("SELECT MAX(last_id) AS b FROM conversations WHERE user_id = ?", (user_id,)).fetchone()
+            row = conn.execute(
+                "SELECT MAX(COALESCE((SELECT last_id FROM archive_marks WHERE user_id = ?), 0), "
+                "COALESCE((SELECT MAX(last_id) FROM conversations WHERE user_id = ?), 0)) AS b", (user_id, user_id)).fetchone()
         return row["b"] or 0
 
     def archive(self, user_id: str) -> Optional[dict]:
@@ -74,6 +76,9 @@ class MemoryStore:
                     "unresolved, settled_turns, calm_turns) VALUES (?, ?, ?, ?, ?, 0, '', ?, ?, ?, ?, ?)",
                     (user_id, title, rows[0]["id"], rows[-1]["id"], len(rows), now.isoformat(),
                      (now + timedelta(days=days)).isoformat(), ",".join(unresolved), len(folded_ids), len(calm_ids))).lastrowid
+                conn.execute("INSERT INTO archive_marks (user_id, last_id) VALUES (?, ?) "
+                             "ON CONFLICT(user_id) DO UPDATE SET last_id = MAX(last_id, excluded.last_id)",
+                             (user_id, rows[-1]["id"]))
                 head = {"id": cid, "title": title, "archived_at": now.isoformat()}
                 raw = len(gzip.compress(json.dumps({**head, "turns": rows}, ensure_ascii=False).encode("utf-8")))
                 path = self._write(user_id, cid, {**head, "turns": turns})

@@ -104,6 +104,13 @@ CREATE TABLE IF NOT EXISTS conversations (
     calm_turns INTEGER NOT NULL DEFAULT 0        -- turns with no contradiction, kept as outcome only
 );
 
+-- Where the current conversation starts: the newest interaction ever archived. It only moves forward,
+-- so deleting an archive never pulls its erased turns back into the current chat.
+CREATE TABLE IF NOT EXISTS archive_marks (
+    user_id TEXT PRIMARY KEY,
+    last_id INTEGER NOT NULL
+);
+
 -- A simulated wallet per user: a $ limit and what answers have cost so far (list prices).
 CREATE TABLE IF NOT EXISTS budgets (
     user_id TEXT PRIMARY KEY,
