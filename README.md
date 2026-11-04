@@ -2,6 +2,8 @@
 
 **An AI agent that notices when what you say you want doesn't match what you do, and spends model power only where that gap exists.**
 
+**Live demo:** https://dissonance-router-meta.onrender.com/ (hosted on a free instance, so the first load after idle can take about 50 seconds; the judges' access code is in the submission).
+
 Built for the Meta Global AI Developer Hackathon (Indie Developer track). Every answer comes from Meta's Muse models through the Meta Model API, and every routing decision is logged with its reason.
 
 *This repository is the Meta version of a project that began as an earlier hackathon entry. The model layer, prices, reasoning control, reports and interface were rebuilt for Meta's models, and no earlier results are included.*
