@@ -8,6 +8,11 @@ Built for the Meta Global AI Developer Hackathon (Indie Developer track). Every 
 
 *This repository is the Meta version of a project that began as an earlier hackathon entry. The model layer, prices, reasoning control, reports and interface were rebuilt for Meta's models, and no earlier results are included.*
 
+<p align="center">
+  <img src="docs/images/chat-escalation.png" alt="The chat view: the user said concise but keeps asking for detail, so the router escalated to Ultra and shows why" width="900">
+</p>
+<p align="center"><em>The user said <strong>concise</strong> but keeps asking for <strong>detail</strong>. The router escalates to Ultra and shows why (right panel).</em></p>
+
 ---
 
 ## At a glance
@@ -21,7 +26,28 @@ Measured on 200 live scenario runs against the Meta Model API (260 graded turns)
 | Less waiting than always using Ultra | **66.8%** |
 | Blind comparisons where Nano was as good as Ultra | **60%** (36 of 60), at a median **1/6.8** of the cost |
 | Live runs saved as evidence | **300**, for **$1.18** in total |
-| Automated tests (no network needed) | **355** |
+| Automated tests (no network needed) | **356** |
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/budget-savings.png" alt="Budget page with the measured savings from routing"><br><sub><b>Savings.</b> The router against always-Nano and always-Ultra, plus a live usage ledger.</sub></td>
+    <td width="50%"><img src="docs/images/personas.png" alt="Five scripted demo personas and a clean profile"><br><sub><b>Personas.</b> Five scripted users, including known failures that are shown, not hidden.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/reports.png" alt="Saved test runs with outcomes and latency"><br><sub><b>Evidence.</b> Every saved run, with its outcome, latency and tokens.</sub></td>
+    <td width="50%"><img src="docs/images/memory.png" alt="Conflict-aware memory with an unresolved conversation held longer"><br><sub><b>Memory.</b> A conversation with an open contradiction is kept longer; calm turns keep only the outcome.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/images/notes.png" alt="Note bot timeline of what the agent learned"><br><sub><b>Notes.</b> What the agent learned and why, written with fixed sentences and no tokens.</sub></td>
+    <td width="50%"><img src="docs/images/models.png" alt="Models page showing the Muse model and reasoning effort for each tier"><br><sub><b>Models.</b> The Muse model, reasoning effort and price behind each tier.</sub></td>
+  </tr>
+</table>
+
+The app ships with nine themes ([preview](docs/images/themes.png)).
 
 ---
 
@@ -407,7 +433,8 @@ src/cli.py        terminal interface
 src/main.py       app entry point
 models.toml       Meta models, reasoning effort and prices per tier, in two modes
 docs/reports/     300 saved live runs (.json.gz)
-tests/            355 unit tests, no network
+docs/images/      screenshots used in this README
+tests/            356 unit tests, no network
 ```
 
 ---
