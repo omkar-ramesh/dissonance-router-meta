@@ -119,7 +119,6 @@ def readme() -> dict:
     """
     text = (_ROOT / "README.md").read_text(encoding="utf-8")
     text = re.sub(r"<(p|table)\b.*?</\1>\s*", "", text, flags=re.S)
-    text = re.sub(r"^The app ships with nine themes.*\n", "", text, flags=re.M)
     return {"markdown": text}
 
 

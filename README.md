@@ -9,9 +9,8 @@ Built for the Meta Global AI Developer Hackathon (Indie Developer track). Every 
 *This repository is the Meta version of a project that began as an earlier hackathon entry. The model layer, prices, reasoning control, reports and interface were rebuilt for Meta's models, and no earlier results are included.*
 
 <p align="center">
-  <img src="docs/images/chat-escalation.png" alt="The chat view: the user said concise but keeps asking for detail, so the router escalated to Ultra and shows why" width="900">
+  <img src="docs/images/chat-start.png" alt="The Dissonance Router: the chat on the left, and the mirror on the right showing what you said against what you do" width="900">
 </p>
-<p align="center"><em>The user said <strong>concise</strong> but keeps asking for <strong>detail</strong>. The router escalates to Ultra and shows why (right panel).</em></p>
 
 ---
 
@@ -30,44 +29,22 @@ Measured on 200 live scenario runs against the Meta Model API (260 graded turns)
 
 ---
 
-## Screenshots
-
-<table>
-  <tr>
-    <td width="50%"><img src="docs/images/budget-savings.png" alt="Budget page with the measured savings from routing"><br><sub><b>Savings.</b> The router against always-Nano and always-Ultra, plus a live usage ledger.</sub></td>
-    <td width="50%"><img src="docs/images/personas.png" alt="Five scripted demo personas and a clean profile"><br><sub><b>Personas.</b> Five scripted users, including known failures that are shown, not hidden.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/reports.png" alt="Saved test runs with outcomes and latency"><br><sub><b>Evidence.</b> Every saved run, with its outcome, latency and tokens.</sub></td>
-    <td width="50%"><img src="docs/images/memory.png" alt="Conflict-aware memory with an unresolved conversation held longer"><br><sub><b>Memory.</b> A conversation with an open contradiction is kept longer; calm turns keep only the outcome.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="docs/images/notes.png" alt="Note bot timeline of what the agent learned"><br><sub><b>Notes.</b> What the agent learned and why, written with fixed sentences and no tokens.</sub></td>
-    <td width="50%"><img src="docs/images/models.png" alt="Models page showing the Muse model and reasoning effort for each tier"><br><sub><b>Models.</b> The Muse model, reasoning effort and price behind each tier.</sub></td>
-  </tr>
-</table>
-
-The app ships with nine themes ([preview](docs/images/themes.png)).
-
----
-
 ## Contents
 
 1. [The problem](#the-problem)
-2. [How it works](#how-it-works)
-3. [What makes it different](#what-makes-it-different)
-4. [Results](#results)
-5. [Built on the Meta Model API](#built-on-the-meta-model-api)
-6. [Quick start](#quick-start)
-7. [Using the app](#using-the-app)
-8. [Features](#features)
-9. [Design guidelines](#design-guidelines)
-10. [Evaluation and reports](#evaluation-and-reports)
-11. [HTTP API](#http-api)
-12. [Configuration](#configuration)
-13. [Project layout](#project-layout)
-14. [Known limitations](#known-limitations)
-15. [License](#license)
+2. [How it works, step by step](#how-it-works-step-by-step)
+3. [Results](#results)
+4. [Built on the Meta Model API](#built-on-the-meta-model-api)
+5. [Quick start](#quick-start)
+6. [Using the app](#using-the-app)
+7. [More features](#more-features)
+8. [Design guidelines](#design-guidelines)
+9. [Evaluation and reports](#evaluation-and-reports)
+10. [HTTP API](#http-api)
+11. [Configuration](#configuration)
+12. [Project layout](#project-layout)
+13. [Known limitations](#known-limitations)
+14. [License](#license)
 
 ---
 
@@ -77,38 +54,42 @@ Most assistants store "I prefer short answers" and treat it as a fact. People of
 
 Model routers usually pick a model by how hard the *question* looks. That ignores the person asking. A simple question from someone whose words and behaviour disagree is exactly where a cheap answer is most likely to miss.
 
-**The Dissonance Router picks a model by how uncertain the agent is about you.**
+**The Dissonance Router picks a model by how uncertain the agent is about you**, so the same question can go to different tiers for different people. It spends more only when its model of *you* is in doubt, and says why every time.
 
 ---
 
-## How it works
+## How it works, step by step
 
-The agent keeps two profiles per user across five dimensions: **tone, length, sourcing, structure** and **revision**.
+### Step 1: Say how you like answers
+
+The agent keeps two profiles per user across five dimensions: **tone, length, sourcing, structure** and **revision**. The **mirror**, on the right of the screenshot at the top, shows both and names the tier that will answer next.
 
 | Profile | Source |
 |---|---|
-| **Stated** | What you told it you prefer |
+| **Stated** | What you told it you prefer. Click a word in the mirror to set it |
 | **Observed** | What it learned from how you actually ask and react |
 
 When the two disagree, that disagreement is the signal.
 
-### 1. Learn from words and from behaviour
+### Step 2: Ask normally, and let it learn
 
 - **Words.** The Nano tier reads each message for style requests, in any language ("I'm still lost", "short version please"). It must quote your exact words as evidence, or nothing is learned. Words inside quotation marks belong to someone else and don't count.
 - **Behaviour.** What you *do* with an answer: 👍, 👎 with a reason ("too long"), Copy, or Try again.
 - **Habits, not remarks.** A value only becomes a habit when it repeats recently. Recent turns weigh more and old habits fade, so one offhand comment changes nothing.
 
-### 2. Score the conflict
+### Step 3: Score the conflict and route to a tier
 
-Each dimension gets a score from 0 to 1:
+<p align="center">
+  <img src="docs/images/chat-escalation.png" alt="The user said concise but keeps asking for detail, so the router escalated to Ultra and shows why" width="900">
+</p>
+
+Here the user said *concise* but keeps asking for *detailed*. Each dimension gets a score from 0 to 1:
 
 | Situation | Score |
 |---|---|
 | Stated and observed agree, or nothing observed yet | 0.00 |
 | A preference is emerging that was never stated | 0.40, rising to 0.65 |
 | Opposite poles (stated *concise*, observed *detailed*) | 0.70, rising to 0.80 / 0.90 / 0.95 as it repeats |
-
-### 3. Route to a tier
 
 The strongest single contradiction decides the tier. The average is not used, because one clear contradiction averages to 0.14 across five dimensions and would never escalate.
 
@@ -118,25 +99,25 @@ The strongest single contradiction decides the tier. The average is not used, be
 | 0.40 to 0.70 | **Super** | A preference is emerging |
 | 0.70 and above | **Ultra** | The agent is unsure what you want, so the answer matters |
 
-### 4. Reconcile
-
 On an Ultra escalation the model is told about the contradiction and asked to serve both sides, for example a one-line summary for the "concise" you said, followed by the depth you keep asking for.
 
-### 5. Explain and ask
+### Step 4: Explain every choice, and ask
+
+<p align="center">
+  <img src="docs/images/notes.png" alt="The note bot's timeline of what the agent learned and why" width="900">
+</p>
 
 Every decision is logged in plain words, for example *"you said 'concise', you behave 'detailed', seen 3×, score 0.90"*. The agent then offers to update your stated preference. Accepting closes the conflict, and it can be undone.
 
----
+The **note bot** keeps the timeline above: *"You said you prefer short answers"*, *"Learned: you keep wanting detailed answers"*. Notes are written from records the agent already keeps, using fixed sentences, so they use **no tokens** and invent nothing.
 
-## What makes it different
+### Step 5: Remember by conflict, not just by age
 
-### Routing by the person, not the prompt
+<p align="center">
+  <img src="docs/images/memory.png" alt="A saved conversation with an unresolved contradiction, held longer" width="900">
+</p>
 
-The same question can go to different tiers for different people. The router spends more only when the agent's model of *you* is in doubt, and says why every time.
-
-### Conflict-aware memory
-
-What the agent remembers follows the same dissonance signal, not just age:
+**＋ New chat** saves the conversation you're leaving and starts a clean thread. Your profile stays, because a new chat isn't a new person. What is kept follows the same dissonance signal:
 
 | Turn | What is kept |
 |---|---|
@@ -144,13 +125,45 @@ What the agent remembers follows the same dissonance signal, not just age:
 | **Open contradiction** | Every word, marked *unresolved*, with the conversation held **3× longer** (30 days instead of 10) |
 | **Settled** (you accepted the update) | Folded into one preference note, and removed from the model's context |
 
-This uses fixed rules: no model call and no tokens. Words that are dropped leave the database too, and your Delete button always wins.
+This uses fixed rules: no model call and no tokens. Each saved chat is deleted after its time is up unless you press **Keep**, and the words that are dropped leave the database too. Three days before a deletion the chat reminds you, at most once a day.
 
-### Everything is measured
+### Step 6: Spend inside a budget
 
-- A **usage ledger** records every Meta API call as it finishes: tokens, cached tokens, thinking tokens, cost and latency. Message text is never stored.
-- A **savings card** compares the router with always-Nano and always-Ultra across every saved live run.
-- The **predicted** cost of each answer is shown next to its **measured** cost.
+<p align="center">
+  <img src="docs/images/budget-savings.png" alt="Budget page: spending limit, measured savings from routing, and the live usage ledger" width="900">
+</p>
+
+Settings → Budget has three parts:
+
+- **Limit.** A simulated wallet: real token counts × Meta list prices, with no real money. If the tier the router wants would take more than 20% of what's left, it steps down a tier and says so. Under 25% left, reasoning drops to minimal and answers get shorter. An answer can never cost more than what's left.
+- **Savings from routing.** The router against always-Nano and always-Ultra, added up across every saved live run.
+- **Usage.** Every Meta API call this project made: requests, input and cached tokens, output and thinking tokens, cost and latency, broken down by model, tier and effort. It refreshes every 3 seconds and exports to CSV. Message text is never stored.
+
+### Step 7: Try five personas
+
+<p align="center">
+  <img src="docs/images/personas.png" alt="Five scripted demo personas and a clean profile" width="900">
+</p>
+
+Five scripted users, each replayable with one click. The script is fixed, and the answers come from the real models.
+
+| Persona | Behaviour | Expected outcome |
+|---|---|---|
+| **Hope** | Says short, asks short | Success: every answer stays on Nano |
+| **Jordan** | Says short, keeps asking for detail | Success: the contradiction escalates |
+| **Casey** | Complains without style words | Known gap: the complaint can be missed |
+| **Sam** | Says "don't keep it short" | Known gap: the negation can be misread |
+| **Kai** | A model invents a source | The planted false link is flagged |
+
+When a demo fails, **Hope** reviews it without a model call: why it failed, a proposed fix checked against the failing message, and an optional kept rule the signal reader uses from then on.
+
+### Step 8: Check the evidence
+
+<p align="center">
+  <img src="docs/images/reports.png" alt="Saved test runs with outcome, latency and tokens" width="900">
+</p>
+
+Every run is saved as a report: the models used, the persona, the outcome, latency and tokens, with full details of every turn. Failures are shown with reason codes, not hidden. Results are summarised below, and the method is in [docs/EVAL.md](docs/EVAL.md).
 
 ---
 
@@ -197,6 +210,10 @@ Ultra is slower because it reasons before answering. That is the cost the router
 ---
 
 ## Built on the Meta Model API
+
+<p align="center">
+  <img src="docs/images/models.png" alt="The Muse model, reasoning effort and price behind each tier" width="900">
+</p>
 
 Every tier is a Muse model served by the [Meta Model API](https://dev.meta.ai/docs/overview), an OpenAI-compatible Chat Completions endpoint at `https://api.meta.ai/v1`. The models share a 1M-token context window, so the router's real dial is **reasoning effort**: how much thinking it pays for on each request.
 
@@ -274,72 +291,20 @@ The app is a single page with three views, chosen from the left sidebar or with 
 
 **▶ Play the demo** runs the core contradiction in about a minute with real model calls. A guided tour starts on the first visit, and **? Tutorials** explains every button.
 
-**Settings**
+**Settings:** Overview, Profile, Reports, Budget, Models, Memory, Notes, About, and Accessibility (the tour, this README and the theme picker).
 
-| Tab | Purpose |
-|---|---|
-| Overview | Everything at a glance |
-| Profile | Your session, and the scripted demo personas |
-| Reports | Every saved test run, with full details |
-| Budget | Spending limit, savings from routing, and live usage |
-| Models | Which model serves each tier, and the Standard / Contributor switch |
-| Memory | Past conversations and what was kept |
-| Notes | What the agent learned about you, and why |
-| About | How it works |
-| Accessibility | The tour, this README and the theme picker |
+<p align="center">
+  <img src="docs/images/themes.png" alt="Nine themes, each showing its colours and the three tier colours" width="900">
+</p>
+
+Nine themes, chosen from the **brush button** in the top bar or in Settings → Accessibility. **Deep Meta** is the default, and the choice is remembered in the browser.
 
 ---
 
-## Features
+## More features
 
-### The mirror
-
-Each style dimension is shown as a spectrum: a ring for what you said and a dot for what you do, with the gap glowing as the contradiction grows. Click a word to change your stated preference. When the agent suggests adopting a habit, a one-click **Yes, update it** appears, with Undo.
-
-### Budget, savings and usage
-
-Settings → Budget holds three cards.
-
-- **Limit.** A simulated wallet: real token counts × Meta list prices, with no real money. If the tier the router wants would take more than 20% of what's left, it steps down a tier and says so. Under 25% left, reasoning drops to minimal and answers get shorter. An answer can never cost more than what's left.
-- **Savings from routing.** The router against always-Nano and always-Ultra, added up across every saved live run.
-- **Usage.** Every Meta API call this project made: requests, input and cached tokens, output and thinking tokens, cost, latency, a cost-per-day chart, breakdowns by model, tier, source and effort, and the latest calls. It refreshes every 3 seconds, filters by time range and exports to CSV.
-
-### Memory
-
-**＋ New chat** saves the conversation you're leaving and starts a clean thread. Your profile stays, because a new chat isn't a new person.
-
-- Saved conversations follow the conflict-aware rules described [above](#conflict-aware-memory).
-- Each one is deleted after 10 days (30 if a contradiction is still open) unless you press **Keep**.
-- Each card shows its badges (*unresolved*, *folded into a note*), its size before and after compression, and buttons to Keep, Open, Download or Delete.
-- Three days before a deletion the chat reminds you, at most once a day.
-
-### Note bot
-
-The square button left of the message box keeps notes on what the agent learned and why. For example: *"You said you prefer short answers"*, *"Learned: you keep wanting detailed answers"*, or *"2 turns that argued about length folded into one note"*.
-
-Notes are written from records the agent already keeps, using fixed sentences. They use **no tokens** and invent nothing.
-
-### Personas and Hope
-
-Five scripted demo users, each replayable with one click. The script is fixed, and the answers come from the real models.
-
-| Persona | Behaviour | Expected outcome |
-|---|---|---|
-| **Hope** | Says short, asks short | Success: every answer stays on Nano |
-| **Jordan** | Says short, keeps asking for detail | Success: the contradiction escalates |
-| **Casey** | Complains without style words | Known gap: the complaint can be missed |
-| **Sam** | Says "don't keep it short" | Known gap: the negation can be misread |
-| **Kai** | A model invents a source | The planted false link is flagged |
-
-When a demo fails, **Hope** reviews it without a model call: why it failed, a proposed fix checked against the failing message, and an optional kept rule the signal reader uses from then on.
-
-### Themes and accessibility
-
-Nine themes, chosen from the **brush button** in the top bar or in Settings → Accessibility. **Deep Meta** is the default. Each theme square shows its colours and the three tier colours. The choice is remembered in the browser.
-
-### Public demo mode
-
-Set `PUBLIC_DEMO=1` for a hosted link. It enables random private session ids, a per-IP rate limit, output caps per tier, a daily spending cut-off and an optional access code. Limits are kept in memory, which suits a single-instance demo but not production.
+- **Public demo mode.** Set `PUBLIC_DEMO=1` for a hosted link. It enables random private session ids, a per-IP rate limit, output caps per tier, a daily spending cut-off and an optional access code. Limits are kept in memory, which suits a single-instance demo but not production.
+- **Terminal interface** and **HTTP API** for everything the app does (see below).
 
 ---
 
