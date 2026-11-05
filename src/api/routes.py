@@ -115,10 +115,11 @@ def hope_apply(req: HopeReview, agent: Agent = Depends(get_agent)) -> dict:
 def readme() -> dict:
     """The project README, shown in Settings → Accessibility.
 
-    The in-app viewer renders plain markdown only, so the screenshot blocks (HTML for GitHub) are left out here.
+    The in-app viewer renders plain markdown only, so the screenshots, badges and diagram (HTML and Mermaid for GitHub) are left out here.
     """
     text = (_ROOT / "README.md").read_text(encoding="utf-8")
     text = re.sub(r"<(p|table)\b.*?</\1>\s*", "", text, flags=re.S)
+    text = re.sub(r"```mermaid.*?```\s*", "", text, flags=re.S)
     return {"markdown": text}
 
 

@@ -2,6 +2,11 @@
 
 **An AI agent that notices when what you say you want doesn't match what you do, and spends model power only where that gap exists.**
 
+<p>
+  <a href="https://github.com/omkar-ramesh/dissonance-router-meta/actions/workflows/tests.yml"><img src="https://github.com/omkar-ramesh/dissonance-router-meta/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license"></a>
+</p>
+
 **Live demo:** https://dissonance-router-meta.onrender.com/ (hosted on a free instance, so the first load after idle can take about 50 seconds; the judges' access code is in the submission).
 
 Built for the Meta Global AI Developer Hackathon (Indie Developer track). Every answer comes from Meta's Muse models through the Meta Model API, and every routing decision is logged with its reason.
@@ -9,7 +14,7 @@ Built for the Meta Global AI Developer Hackathon (Indie Developer track). Every 
 *This repository is the Meta version of a project that began as an earlier hackathon entry. The model layer, prices, reasoning control, reports and interface were rebuilt for Meta's models, and no earlier results are included.*
 
 <p align="center">
-  <img src="docs/images/chat-start.png" alt="The Dissonance Router: the chat on the left, and the mirror on the right showing what you said against what you do" width="900">
+  <a href="docs/images/chat-start.png"><img src="docs/images/chat-start.png" alt="The Dissonance Router: the chat on the left, and the mirror on the right showing what you said against what you do" width="900"></a>
 </p>
 
 ---
@@ -60,6 +65,25 @@ Model routers usually pick a model by how hard the *question* looks. That ignore
 
 ## How it works, step by step
 
+The whole loop, from one message to the next:
+
+```mermaid
+flowchart LR
+    M[Your message] --> R[Nano reads it<br/>and quotes your words]
+    R --> O[Observed profile<br/>words and behaviour]
+    S[Stated profile<br/>what you said] --> C
+    O --> C[Conflict score<br/>0 to 1 per dimension]
+    C --> T{Strongest<br/>contradiction}
+    T -->|below 0.40| N[Nano]
+    T -->|0.40 to 0.70| P[Super]
+    T -->|0.70 and above| U[Ultra]
+    N --> A[Answer<br/>with the reason logged]
+    P --> A
+    U --> A
+    A --> F[Your reaction:<br/>thumbs, Copy, Try again]
+    F --> O
+```
+
 ### Step 1: Say how you like answers
 
 The agent keeps two profiles per user across five dimensions: **tone, length, sourcing, structure** and **revision**. The **mirror**, on the right of the screenshot at the top, shows both and names the tier that will answer next.
@@ -80,7 +104,7 @@ When the two disagree, that disagreement is the signal.
 ### Step 3: Score the conflict and route to a tier
 
 <p align="center">
-  <img src="docs/images/chat-escalation.png" alt="The user said concise but keeps asking for detail, so the router escalated to Ultra and shows why" width="900">
+  <a href="docs/images/chat-escalation.png"><img src="docs/images/chat-escalation.png" alt="The user said concise but keeps asking for detail, so the router escalated to Ultra and shows why" width="900"></a>
 </p>
 
 Here the user said *concise* but keeps asking for *detailed*. Each dimension gets a score from 0 to 1:
@@ -104,7 +128,7 @@ On an Ultra escalation the model is told about the contradiction and asked to se
 ### Step 4: Explain every choice, and ask
 
 <p align="center">
-  <img src="docs/images/notes.png" alt="The note bot's timeline of what the agent learned and why" width="900">
+  <a href="docs/images/notes.png"><img src="docs/images/notes.png" alt="The note bot's timeline of what the agent learned and why" width="900"></a>
 </p>
 
 Every decision is logged in plain words, for example *"you said 'concise', you behave 'detailed', seen 3×, score 0.90"*. The agent then offers to update your stated preference. Accepting closes the conflict, and it can be undone.
@@ -114,7 +138,7 @@ The **note bot** keeps the timeline above: *"You said you prefer short answers"*
 ### Step 5: Remember by conflict, not just by age
 
 <p align="center">
-  <img src="docs/images/memory.png" alt="A saved conversation with an unresolved contradiction, held longer" width="900">
+  <a href="docs/images/memory.png"><img src="docs/images/memory.png" alt="A saved conversation with an unresolved contradiction, held longer" width="900"></a>
 </p>
 
 **＋ New chat** saves the conversation you're leaving and starts a clean thread. Your profile stays, because a new chat isn't a new person. What is kept follows the same dissonance signal:
@@ -130,7 +154,7 @@ This uses fixed rules: no model call and no tokens. Each saved chat is deleted a
 ### Step 6: Spend inside a budget
 
 <p align="center">
-  <img src="docs/images/budget-savings.png" alt="Budget page: spending limit, measured savings from routing, and the live usage ledger" width="900">
+  <a href="docs/images/budget-savings.png"><img src="docs/images/budget-savings.png" alt="Budget page: spending limit, measured savings from routing, and the live usage ledger" width="900"></a>
 </p>
 
 Settings → Budget has three parts:
@@ -142,7 +166,7 @@ Settings → Budget has three parts:
 ### Step 7: Try five personas
 
 <p align="center">
-  <img src="docs/images/personas.png" alt="Five scripted demo personas and a clean profile" width="900">
+  <a href="docs/images/personas.png"><img src="docs/images/personas.png" alt="Five scripted demo personas and a clean profile" width="900"></a>
 </p>
 
 Five scripted users, each replayable with one click. The script is fixed, and the answers come from the real models.
@@ -160,7 +184,7 @@ When a demo fails, **Hope** reviews it without a model call: why it failed, a pr
 ### Step 8: Check the evidence
 
 <p align="center">
-  <img src="docs/images/reports.png" alt="Saved test runs with outcome, latency and tokens" width="900">
+  <a href="docs/images/reports.png"><img src="docs/images/reports.png" alt="Saved test runs with outcome, latency and tokens" width="900"></a>
 </p>
 
 Every run is saved as a report: the models used, the persona, the outcome, latency and tokens, with full details of every turn. Failures are shown with reason codes, not hidden. Results are summarised below, and the method is in [docs/EVAL.md](docs/EVAL.md).
@@ -212,7 +236,7 @@ Ultra is slower because it reasons before answering. That is the cost the router
 ## Built on the Meta Model API
 
 <p align="center">
-  <img src="docs/images/models.png" alt="The Muse model, reasoning effort and price behind each tier" width="900">
+  <a href="docs/images/models.png"><img src="docs/images/models.png" alt="The Muse model, reasoning effort and price behind each tier" width="900"></a>
 </p>
 
 Every tier is a Muse model served by the [Meta Model API](https://dev.meta.ai/docs/overview), an OpenAI-compatible Chat Completions endpoint at `https://api.meta.ai/v1`. The models share a 1M-token context window, so the router's real dial is **reasoning effort**: how much thinking it pays for on each request.
@@ -294,7 +318,7 @@ The app is a single page with three views, chosen from the left sidebar or with 
 **Settings:** Overview, Profile, Reports, Budget, Models, Memory, Notes, About, and Accessibility (the tour, this README and the theme picker).
 
 <p align="center">
-  <img src="docs/images/themes.png" alt="Nine themes, each showing its colours and the three tier colours" width="900">
+  <a href="docs/images/themes.png"><img src="docs/images/themes.png" alt="Nine themes, each showing its colours and the three tier colours" width="900"></a>
 </p>
 
 Nine themes, chosen from the **brush button** in the top bar or in Settings → Accessibility. **Deep Meta** is the default, and the choice is remembered in the browser.
